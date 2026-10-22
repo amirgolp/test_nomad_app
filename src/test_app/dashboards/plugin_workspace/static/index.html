@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plugin Workspace</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --paper: #ffffff;
+    --text: #1d2433;
+    --muted: #5b6577;
+    --primary: #2a4cdf;
+    --divider: #dde2ea;
+    --error: #c62828;
+    --success: #2e7d32;
+    --warning: #b26a00;
+    --radius: 8px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-mui-color-scheme="light"]) {
+      --bg: #12151c;
+      --paper: #1b1f29;
+      --text: #e7eaf0;
+      --muted: #9aa3b5;
+      --primary: #8ea2ff;
+      --divider: #2c3240;
+      --error: #ef7a7a;
+      --success: #7bc47f;
+      --warning: #f0b45c;
+      color-scheme: dark;
+    }
+  }
+  :root[data-mui-color-scheme="dark"] {
+    --bg: #12151c;
+    --paper: #1b1f29;
+    --text: #e7eaf0;
+    --muted: #9aa3b5;
+    --primary: #8ea2ff;
+    --divider: #2c3240;
+    --error: #ef7a7a;
+    --success: #7bc47f;
+    --warning: #f0b45c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0; }
+  h2 { font-size: 15px; font-weight: 500; margin: 0 0 12px; }
+  header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  header .spacer { flex: 1; }
+  .user { color: var(--muted); }
+  .grid { display: grid; gap: 16px; }
+  .tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .cols { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); margin-top: 16px; }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius);
+    padding: 16px;
+    min-width: 0;
+  }
+  .tile .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .tile .value { font-size: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; margin-bottom: 10px; }
+  .bar-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--divider); overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--primary); border-radius: 3px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--divider); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: none; }
+  .table-wrap { overflow-x: auto; }
+  .sub { color: var(--muted); font-size: 12px; }
+  .chip {
+    display: inline-block; padding: 0 8px; border-radius: 10px; font-size: 12px;
+    border: 1px solid currentColor; white-space: nowrap;
+  }
+  .chip.ok { color: var(--success); }
+  .chip.fail { color: var(--error); }
+  .chip.busy { color: var(--warning); }
+  .chip.muted { color: var(--muted); }
+  form { display: grid; gap: 12px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > .field { flex: 1 1 200px; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); min-width: 0; }
+  .field .hint { font-size: 12px; }
+  .with-unit { display: flex; align-items: center; gap: 6px; }
+  .with-unit input { flex: 1; }
+  .with-unit .unit { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  input, select {
+    font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--divider); border-radius: 4px; padding: 6px 8px; min-width: 0; width: 100%;
+  }
+  fieldset {
+    border: 1px solid var(--divider); border-radius: 6px; margin: 0; padding: 12px;
+    display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  legend { color: var(--muted); font-size: 12px; padding: 0 4px; }
+  button {
+    font: inherit; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--primary); border-radius: 4px; padding: 6px 14px;
+    background: var(--primary); color: var(--paper); justify-self: start;
+  }
+  button.secondary { background: transparent; color: var(--primary); }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { min-height: 1.5em; font-size: 13px; color: var(--muted); }
+  .status.error { color: var(--error); }
+  .status.success { color: var(--success); }
+  .empty { color: var(--muted); padding: 8px 0; }
+  .signed-out { max-width: 520px; margin: 48px auto; text-align: center; }
+  .signed-out p { color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Plugin Workspace</h1>
+  <span class="chip muted" id="plugin" hidden></span>
+  <span class="user" id="user"></span>
+  <span class="spacer"></span>
+  <button class="secondary" id="refresh" type="button" hidden>Refresh</button>
+</header>
+
+<div class="status" id="global-status">Loading…</div>
+
+<section class="card signed-out" id="signed-out" hidden>
+  <h2>You are not signed in</h2>
+  <p>
+    This workspace creates projects and entries for the logged-in NOMAD user.
+    Sign in to NOMAD, then reload this page.
+  </p>
+  <p><a id="gui-link" target="_top" href="#">Go to NOMAD</a></p>
+</section>
+
+<main id="content" hidden>
+  <section class="grid tiles">
+    <div class="card tile"><div class="label">Entries</div><div class="value" id="t-entries">–</div></div>
+    <div class="card tile"><div class="label">Projects</div><div class="value" id="t-projects">–</div></div>
+    <div class="card tile"><div class="label">Published</div><div class="value" id="t-published">–</div></div>
+    <div class="card tile"><div class="label">Unpublished</div><div class="value" id="t-unpublished">–</div></div>
+    <div class="card tile"><div class="label">Failed processing</div><div class="value" id="t-failed">–</div></div>
+  </section>
+
+  <section class="grid cols">
+    <div class="card">
+      <h2>New entry</h2>
+      <form id="entry-form" novalidate>
+        <div class="row">
+          <label class="field">Project
+            <select id="project" required></select>
+          </label>
+          <label class="field" id="project-name-field" hidden>New project name
+            <input id="project-name" maxlength="120" placeholder="e.g. Thin films batch 12">
+          </label>
+        </div>
+        <div class="row">
+          <label class="field">Schema
+            <select id="schema" required></select>
+            <span class="hint" id="schema-description"></span>
+          </label>
+          <label class="field">Entry name
+            <input id="entry-name" required maxlength="120" placeholder="e.g. Sample A-07">
+          </label>
+        </div>
+        <fieldset id="schema-fields" hidden><legend>Values</legend></fieldset>
+        <button type="submit" id="create">Create entry</button>
+        <div class="status" id="action-status"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Entries per schema</h2>
+      <div id="schema-counts"></div>
+    </div>
+  </section>
+
+  <section class="grid cols">
+    <div class="card">
+      <h2>Latest projects</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Project</th><th class="num">Entries</th><th>Status</th></tr></thead>
+          <tbody id="projects"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Latest entries</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Entry</th><th>Schema</th><th>Status</th></tr></thead>
+          <tbody id="entries"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // The dashboard is mounted at {api_base_path}/dashboards/{id_url_safe}/.
+  var dashboardBase = window.location.pathname.replace(/(\/dashboards\/[^/]+\/).*$/, '$1');
+  var apiBase = dashboardBase.replace(/\/dashboards\/[^/]+\/$/, '');
+  var guiBase = findGuiBase();
+  var NEW_PROJECT = '__new__';
+  var schemas = [];
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function findGuiBase() {
+    // The GUI page embedding us is .../dashboards/{id}; everything before that
+    // is the GUI base. The parent is only readable when it is same-origin, the
+    // referrer may be reduced to the bare origin when it is not.
+    var candidates = [];
+    try { candidates.push(window.parent !== window && window.parent.location.href); } catch (e) {}
+    candidates.push(document.referrer);
+    for (var i = 0; i < candidates.length; i++) {
+      var url = candidates[i];
+      if (!url) continue;
+      var match = url.match(/^(.*?)\/dashboards\//);
+      if (match) return match[1];
+      if (window.parent !== window) return url.replace(/\/+$/, '');
+    }
+    return window.location.origin + apiBase + '/gui/v2';
+  }
+
+  function adoptParentTheme() {
+    if (window.parent === window) return;
+    var parentRoot;
+    try { parentRoot = window.parent.document.documentElement; } catch (e) { return; }
+    var mapping = {
+      '--bg': '--mui-palette-background-default',
+      '--paper': '--mui-palette-background-paper',
+      '--text': '--mui-palette-text-primary',
+      '--muted': '--mui-palette-text-secondary',
+      '--primary': '--mui-palette-primary-main',
+      '--divider': '--mui-palette-divider',
+      '--error': '--mui-palette-error-main',
+      '--success': '--mui-palette-success-main',
+      '--warning': '--mui-palette-warning-main'
+    };
+    function apply() {
+      var root = document.documentElement;
+      var scheme = parentRoot.getAttribute('data-mui-color-scheme');
+      if (scheme) root.setAttribute('data-mui-color-scheme', scheme);
+      var style = window.parent.getComputedStyle(parentRoot);
+      Object.keys(mapping).forEach(function (local) {
+        var value = style.getPropertyValue(mapping[local]).trim();
+        if (value) root.style.setProperty(local, value);
+        else root.style.removeProperty(local);
+      });
+    }
+    apply();
+    new MutationObserver(apply).observe(parentRoot, {
+      attributes: true, attributeFilter: ['data-mui-color-scheme', 'class', 'style']
+    });
+  }
+
+  function request(url, options) {
+    options = options || {};
+    options.credentials = 'same-origin';
+    // Without it, NOMAD's upload endpoints answer with a plain-text message.
+    options.headers = Object.assign({Accept: 'application/json'}, options.headers);
+    return fetch(url, options).then(function (response) {
+      if (response.ok) return response.json();
+      return response.json().catch(function () { return {}; }).then(function (body) {
+        var detail = body && body.detail;
+        if (Array.isArray(detail)) detail = detail.map(function (d) { return d.msg; }).join('; ');
+        var error = new Error(detail || response.status + ' ' + response.statusText);
+        error.status = response.status;
+        throw error;
+      });
+    });
+  }
+
+  function nomad(path, options) { return request(apiBase + '/api/v1' + path, options); }
+  function dashboard(path, options) { return request(dashboardBase + path, options); }
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (key) {
+      if (key === 'text') node.textContent = attrs[key];
+      else node.setAttribute(key, attrs[key]);
+    });
+    (children || []).forEach(function (child) { if (child) node.appendChild(child); });
+    return node;
+  }
+
+  function guiLink(path, label) {
+    return el('a', {href: guiBase + path, target: '_top', text: label});
+  }
+
+  function fmt(n) { return n == null ? '–' : Number(n).toLocaleString(); }
+
+  function ago(iso) {
+    if (!iso) return '';
+    var seconds = (Date.now() - new Date(iso).getTime()) / 1000;
+    var units = [[86400 * 365, 'y'], [86400 * 30, 'mo'], [86400, 'd'], [3600, 'h'], [60, 'min']];
+    for (var i = 0; i < units.length; i++) {
+      if (seconds >= units[i][0]) return Math.floor(seconds / units[i][0]) + units[i][1] + ' ago';
+    }
+    return 'just now';
+  }
+
+  function statusChip(status, running, published) {
+    if (running) return el('span', {class: 'chip busy', text: 'processing'});
+    if (status === 'FAILURE') return el('span', {class: 'chip fail', text: 'failed'});
+    if (published) return el('span', {class: 'chip ok', text: 'published'});
+    return el('span', {class: 'chip muted', text: 'unpublished'});
+  }
+
+  function setStatus(id, content, kind) {
+    var node = $(id);
+    node.replaceChildren();
+    if (typeof content === 'string') node.textContent = content;
+    else if (content) node.appendChild(content);
+    node.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function schemaLabel(entryType) {
+    var schema = schemas.find(function (s) { return s.name === entryType; });
+    return schema ? schema.label : entryType;
+  }
+
+  // --- schema form --------------------------------------------------------
+
+  function renderSchemaOptions() {
+    var select = $('schema');
+    select.replaceChildren();
+    schemas.forEach(function (schema, index) {
+      select.appendChild(el('option', {value: String(index), text: schema.label}));
+    });
+    if (!schemas.length) select.appendChild(el('option', {value: '', text: 'This plugin has no entry schemas'}));
+    renderSchemaFields();
+  }
+
+  function inputFor(field) {
+    var id = 'field-' + field.name;
+    if (field.kind === 'enum' || field.kind === 'boolean') {
+      var options = field.kind === 'enum'
+        ? field.options.map(function (o) { return [o, o]; })
+        : [['true', 'Yes'], ['false', 'No']];
+      return el('select', {id: id}, [el('option', {value: '', text: '–'})].concat(
+        options.map(function (o) { return el('option', {value: o[0], text: o[1]}); })
+      ));
+    }
+    var attrs = {id: id};
+    if (field.kind === 'number') { attrs.type = 'number'; attrs.step = 'any'; }
+    if (field.kind === 'integer') { attrs.type = 'number'; attrs.step = '1'; }
+    return el('input', attrs);
+  }
+
+  function renderSchemaFields() {
+    var schema = schemas[Number($('schema').value)];
+    var fieldset = $('schema-fields');
+    fieldset.replaceChildren(el('legend', {text: 'Values'}));
+    $('schema-description').textContent = (schema && schema.description) || '';
+    if (!schema || !schema.fields.length) { fieldset.hidden = true; return; }
+    schema.fields.forEach(function (field) {
+      var input = inputFor(field);
+      var control = field.unit
+        ? el('span', {class: 'with-unit'}, [input, el('span', {class: 'unit', text: field.unit})])
+        : input;
+      var label = el('label', {class: 'field', title: field.description || ''}, [control]);
+      label.insertBefore(document.createTextNode(field.label), control);
+      fieldset.appendChild(label);
+    });
+    fieldset.hidden = false;
+  }
+
+  function collectValues(schema) {
+    var values = {};
+    schema.fields.forEach(function (field) {
+      var raw = $('field-' + field.name).value.trim();
+      if (raw === '') return;
+      if (field.kind === 'number' || field.kind === 'integer') {
+        var number = Number(raw);
+        if (!isFinite(number) || (field.kind === 'integer' && !Number.isInteger(number))) {
+          throw new Error(field.label + ' must be a' + (field.kind === 'integer' ? 'n integer.' : ' number.'));
+        }
+        values[field.name] = number;
+      } else if (field.kind === 'boolean') {
+        values[field.name] = raw === 'true';
+      } else {
+        values[field.name] = raw;
+      }
+    });
+    return values;
+  }
+
+  // --- rendering ----------------------------------------------------------
+
+  function renderOverview(overview) {
+    var user = overview.user;
+    $('user').textContent = 'Signed in as ' + (user.name || user.username);
+    var published = overview.aggregations.published || {};
+    var processStatus = overview.aggregations.process_status || {};
+    $('t-entries').textContent = fmt(overview.n_entries);
+    $('t-published').textContent = fmt(published.True || 0);
+    $('t-unpublished').textContent = fmt(published.False || 0);
+    $('t-failed').textContent = fmt(processStatus.FAILURE || 0);
+
+    // Every schema of the plugin, including those without entries yet.
+    var counts = overview.aggregations.entry_type || {};
+    var max = Math.max.apply(null, schemas.map(function (s) { return counts[s.name] || 0; }).concat([1]));
+    var container = $('schema-counts');
+    container.replaceChildren();
+    schemas.forEach(function (schema) {
+      var count = counts[schema.name] || 0;
+      container.appendChild(el('div', {class: 'bar-row'}, [
+        el('span', {class: 'name', title: schema.m_def, text: schema.label}),
+        el('span', {class: 'count', text: fmt(count)}),
+        el('div', {class: 'bar'}, [el('span', {style: 'width:' + (100 * count / max) + '%'})])
+      ]));
+    });
+
+    var tbody = $('entries');
+    tbody.replaceChildren();
+    if (!overview.recent_entries.length) {
+      tbody.appendChild(el('tr', {}, [el('td', {colspan: '3', class: 'empty', text: 'No entries yet.'})]));
+    }
+    overview.recent_entries.forEach(function (entry) {
+      var name = entry.entry_name || entry.mainfile || entry.entry_id;
+      tbody.appendChild(el('tr', {}, [
+        el('td', {}, [
+          guiLink('/projects/' + entry.upload_id + '/entries/' + entry.entry_id, name),
+          el('div', {class: 'sub', text: (entry.upload_name || entry.upload_id) + ' · ' + ago(entry.entry_create_time)})
+        ]),
+        el('td', {text: schemaLabel(entry.entry_type)}),
+        el('td', {}, [statusChip(entry.process_status, false, entry.published)])
+      ]));
+    });
+  }
+
+  function renderProjects(response) {
+    var projects = response.data;
+    $('t-projects').textContent = fmt(response.pagination.total);
+
+    var tbody = $('projects');
+    tbody.replaceChildren();
+    if (!projects.length) {
+      tbody.appendChild(el('tr', {}, [el('td', {colspan: '3', class: 'empty', text: 'No projects yet.'})]));
+    }
+    projects.slice(0, 8).forEach(function (project) {
+      tbody.appendChild(el('tr', {}, [
+        el('td', {}, [
+          guiLink('/projects/' + project.upload_id, project.upload_name || project.upload_id),
+          el('div', {class: 'sub', text: ago(project.upload_create_time)})
+        ]),
+        el('td', {class: 'num', text: fmt(project.entries)}),
+        el('td', {}, [statusChip(project.process_status, project.process_running, project.published)])
+      ]));
+    });
+  }
+
+  function renderProjectOptions(projects, selected) {
+    var select = $('project');
+    var previous = selected || select.value;
+    select.replaceChildren();
+    projects.forEach(function (project) {
+      select.appendChild(el('option', {value: project.upload_id, text: project.upload_name || project.upload_id}));
+    });
+    select.appendChild(el('option', {value: NEW_PROJECT, text: '＋ New project…'}));
+    var known = projects.some(function (p) { return p.upload_id === previous; });
+    select.value = known || previous === NEW_PROJECT ? previous : (projects.length ? projects[0].upload_id : NEW_PROJECT);
+    toggleProjectName();
+  }
+
+  function toggleProjectName() {
+    var isNew = $('project').value === NEW_PROJECT;
+    $('project-name-field').hidden = !isNew;
+    $('project-name').required = isNew;
+  }
+
+  function load(selectedProject) {
+    return Promise.all([
+      dashboard('api/overview'),
+      nomad('/uploads?page_size=100&order_by=upload_create_time&order=desc')
+    ]).then(function (results) {
+      renderOverview(results[0]);
+      renderProjects(results[1]);
+      renderProjectOptions(results[1].data.filter(function (p) { return !p.published; }), selectedProject);
+      $('content').hidden = false;
+      $('refresh').hidden = false;
+      $('signed-out').hidden = true;
+      setStatus('global-status', '');
+    }).catch(function (error) {
+      if (error.status === 401) {
+        $('content').hidden = true;
+        $('refresh').hidden = true;
+        $('signed-out').hidden = false;
+        $('user').textContent = '';
+        $('gui-link').href = guiBase + '/';
+        setStatus('global-status', '');
+      } else {
+        setStatus('global-status', 'Could not load data: ' + error.message, 'error');
+      }
+    });
+  }
+
+  // --- actions ------------------------------------------------------------
+
+  function waitForProcessing(uploadId, deadline) {
+    return nomad('/uploads/' + uploadId).then(function (response) {
+      if (!response.data.process_running) return response.data;
+      if (Date.now() > deadline) throw new Error('The project is still processing, try again shortly.');
+      return new Promise(function (resolve) { setTimeout(resolve, 1000); })
+        .then(function () { return waitForProcessing(uploadId, deadline); });
+    });
+  }
+
+  function ensureProject() {
+    if ($('project').value !== NEW_PROJECT) return Promise.resolve($('project').value);
+    var name = $('project-name').value.trim();
+    setStatus('action-status', 'Creating project "' + name + '"…');
+    return nomad('/uploads?upload_name=' + encodeURIComponent(name), {method: 'POST'})
+      .then(function (response) {
+        return waitForProcessing(response.upload_id, Date.now() + 30000)
+          .then(function () { return response.upload_id; });
+      });
+  }
+
+  function createEntry(projectId, schema, entryName, values) {
+    // Same request the NOMAD GUI makes for "create entry from schema".
+    var slug = entryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'entry';
+    var fileName = slug + '.archive.json';
+    var archive = {data: Object.assign({m_def: schema.m_def}, values)};
+    if (schema.fields.some(function (f) { return f.name === 'name'; }) && !('name' in values)) {
+      archive.data.name = entryName;
+    }
+    setStatus('action-status', 'Creating ' + fileName + '…');
+    return nomad(
+      '/uploads/' + projectId + '/raw/?file_name=' + encodeURIComponent(fileName) +
+        '&overwrite_if_exists=false&wait_for_processing=true',
+      {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(archive)}
+    ).then(function (response) {
+      var processing = response.processing || {};
+      var entry = processing.entry || {};
+      var entryId = processing.entry_id || entry.entry_id;
+      var status = processing.process_status || entry.process_status;
+      if (!entryId) throw new Error('NOMAD did not return an entry id.');
+      if (status && status !== 'SUCCESS') {
+        throw new Error((processing.errors || entry.errors || []).join(', ') || 'Processing failed.');
+      }
+      return entryId;
+    });
+  }
+
+  $('project').addEventListener('change', toggleProjectName);
+  $('schema').addEventListener('change', renderSchemaFields);
+
+  $('entry-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var form = event.target;
+    if (!form.reportValidity()) return;
+    var schema = schemas[Number($('schema').value)];
+    var entryName = $('entry-name').value.trim();
+    var values;
+    try { values = collectValues(schema); } catch (error) {
+      setStatus('action-status', error.message, 'error');
+      return;
+    }
+
+    var button = $('create');
+    button.disabled = true;
+    var projectId;
+    ensureProject()
+      .then(function (id) {
+        projectId = id;
+        return createEntry(projectId, schema, entryName, values);
+      })
+      .then(function (entryId) {
+        $('entry-name').value = '';
+        $('project-name').value = '';
+        renderSchemaFields();
+        return load(projectId).then(function () {
+          var message = el('span', {}, [
+            document.createTextNode('Created ' + schema.label + ' "' + entryName + '". '),
+            guiLink('/projects/' + projectId + '/entries/' + entryId, 'Open entry')
+          ]);
+          setStatus('action-status', message, 'success');
+        });
+      })
+      .catch(function (error) {
+        setStatus('action-status', 'Could not create the entry: ' + error.message, 'error');
+        // A new project may exist even if the entry failed.
+        if (projectId) load(projectId);
+      })
+      .finally(function () { button.disabled = false; });
+  });
+
+  $('refresh').addEventListener('click', function () { load(); });
+
+  adoptParentTheme();
+  dashboard('api/plugin').then(function (response) {
+    schemas = response.schemas;
+    var plugin = response.plugin;
+    $('plugin').textContent = plugin.name + (plugin.version ? ' ' + plugin.version : '');
+    $('plugin').title = plugin.description || '';
+    $('plugin').hidden = false;
+    renderSchemaOptions();
+    return load();
+  }).catch(function (error) {
+    setStatus('global-status', 'Could not load the plugin schemas: ' + error.message, 'error');
+  });
+})();
+</script>
+</body>
+</html>

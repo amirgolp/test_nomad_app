@@ -27,8 +27,14 @@ maintainers = [
 license = { file = "LICENSE" }
 dependencies = [
     "nomad-lab>=1.3.0",
+    "plotly>=5.0",
+    "psutil>=5.9",
+    "streamlit>=1.66",
     "python-magic-bin; sys_platform == 'win32'",
 ]
+
+[project.scripts]
+test-app-public-explorer = "test_app.external.public_explorer.cli:main"
 
 [project.urls]
 Repository = "https://github.com/foo/test_app"
@@ -83,12 +89,16 @@ select = [
 
 ignore = [
     "F403", # 'from module import *' used; unable to detect undefined names
+    "PLC0415", # entry point load() methods import lazily by design
 ]
 
 fixable = ["ALL"]
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004"]
 
 # this is entirely optional, you can remove this if you wish to
 [tool.ruff.format]
@@ -110,11 +120,26 @@ package-dir = { "" = "src" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"test_app.dashboards.lab_monitor" = [".streamlit/config.toml", "rupture_fx.*", "icon.svg"]
+"test_app.dashboards.plugin_workspace" = ["static/*"]
+
 [project.entry-points.'nomad.plugin']
 
 schema_package_entry_point = "test_app.schema_packages:schema_package_entry_point"
 
 app_entry_point = "test_app.apps:app_entry_point"
+
+lab_monitor_dashboard = "test_app.dashboards:lab_monitor_dashboard"
+
+plugin_workspace_dashboard = "test_app.dashboards:plugin_workspace_dashboard"
+
+public_explorer_dashboard = "test_app.dashboards:public_explorer_dashboard"
+
+[tool.pytest.ini_options]
+# tests/apps/test_app.py would otherwise be imported as `test_app` and shadow
+# the package.
+addopts = "--import-mode=importlib"
 
 [tool.cruft]
 # Avoid updating workflow files, this leads to permissions issues

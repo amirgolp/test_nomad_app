@@ -4,6 +4,105 @@ Nomad example template
 
 This `nomad` plugin was generated with `Cookiecutter` along with `@nomad`'s [`cookiecutter-nomad-plugin`](https://github.com/FAIRmat-NFDI/cookiecutter-nomad-plugin) template.
 
+## Dashboards
+
+The plugin ships three dashboard entry points, which show up on the
+*Dashboards* page of the new NOMAD GUI. They cover both hosting modes:
+
+- **Internal** (Lab Monitor, Plugin Workspace): `load()` returns a FastAPI app
+  that NOMAD mounts at `{api_base_path}/dashboards/{id_url_safe}/`. They run
+  inside the NOMAD process, on NOMAD's origin, and receive the GUI's login
+  cookie.
+- **External** (Public Data Explorer): the entry point only sets
+  `external_url`. NOMAD mounts nothing; the GUI embeds or opens that URL, and
+  the service runs, authenticates and styles itself.
+
+| Entry point | URL slug | What it does |
+| --- | --- | --- |
+| `test_app.dashboards:lab_monitor_dashboard` | `lab-monitor` | Streamlit app with two tabs: *Lab equipment* shows live gauges of a simulated sputter chamber (pressure, substrate temperature, argon flow, cooling water, chiller, LN2 dewar) with controls and fault injection; *Computer* shows resource usage (CPU, memory, disk) and content statistics of the NOMAD Oasis. |
+| `test_app.dashboards:plugin_workspace_dashboard` | `plugin-workspace` | Requires login. Creates projects and entries from the schemas of one plugin (picked from a dropdown, with a form generated from the schema), and shows the user's entries of those schemas. |
+| `test_app.dashboards:public_explorer_dashboard` | external: `http://localhost:8502/` | Separate Streamlit service. Explores public data of central NOMAD (or any NOMAD API) by element and simulation program: periodic-table heatmap, programs, methods, uploads per year, latest entries. |
+
+How they work:
+
+- **Lab Monitor** mounts Streamlit's ASGI app (`st.App`, Streamlit >= 1.66)
+  inside NOMAD, so no separate Streamlit server is needed. The simulator
+  (`dashboards/lab_monitor/simulator.py`) has no Streamlit dependency. It is
+  advanced lazily whenever someone views it and is shared by all viewers
+  served by the same NOMAD process. With several API workers, each worker
+  simulates its own lab.
+  - The *Gas inlet stuck open* fault drives the chamber above
+    1200 mbar. That starts a 10 s rupture countdown drawn over the pressure
+    gauge; closing the inlet cancels it, otherwise the chamber ruptures with an
+    explosion animation and stays broken until *Reset chamber*. The countdown
+    and animation are a Streamlit v2 component (`rupture_fx.py`, `.js`,
+    `.css`) that ticks in the browser from the server's deadline.
+  - Its icon (`icon.svg`) is served by the dashboard itself at
+    `/dashboards/lab-monitor/icon.svg`. The entry point fills in the
+    absolute URL from NOMAD's configured public address when the GUI asks
+    for it; an `icon` set in `nomad.yaml` takes precedence.
+- **Plugin Workspace** lists the entry sections (`EntryData` subclasses) of a
+  plugin's schema packages. Each scalar quantity with an ELN annotation
+  becomes a form field (text, number with unit, enum, yes/no). New entries
+  are created the same way as in the NOMAD GUI: an `<name>.archive.json` file
+  with `data.m_def` is written into the project and processed. By default the
+  plugin is the one that ships the dashboard; set `schema_plugin` to target
+  another plugin package:
+
+  ```yaml
+  plugins:
+    entry_points:
+      options:
+        test_app.dashboards:plugin_workspace_dashboard:
+          schema_plugin: some_other_plugin
+  ```
+
+  The dashboard reuses the `Authorization` cookie that the GUI sets for
+  `api_base_path`. Its route `/api/overview` resolves the user with
+  `get_current_user` and queries NOMAD's search for entries of those schemas;
+  the page calls `/api/v1/uploads` with the same cookie.
+
+- **Public Data Explorer** lives in `test_app/external/public_explorer` and
+  does not import NOMAD; it only needs `streamlit`, `plotly` and `requests`.
+  It has no NOMAD session, so it reads public data through the REST API like
+  any other client. Start it next to NOMAD:
+
+  ```sh
+  test-app-public-explorer          # serves http://localhost:8502
+  PUBLIC_EXPLORER_PORT=9000 test-app-public-explorer
+  ```
+
+  For a deployment, point the entry point at where the service runs:
+
+  ```yaml
+  plugins:
+    entry_points:
+      options:
+        test_app.dashboards:public_explorer_dashboard:
+          external_url: https://explorer.example.org/
+  ```
+
+Enable them in `nomad.yaml`. If you use an explicit `include` list, add the
+schema package as well, so that its schemas are offered and its entries
+process:
+
+```yaml
+plugins:
+  include:
+    # ... your existing entry points
+    - test_app.schema_packages:schema_package_entry_point
+    - test_app.dashboards:lab_monitor_dashboard
+    - test_app.dashboards:plugin_workspace_dashboard
+    - test_app.dashboards:public_explorer_dashboard
+
+# Only needed when the GUI runs on a different origin, e.g. the Vite dev
+# server. Deployed GUIs are same-origin and are covered by the default.
+dashboards:
+  frame_ancestors:
+    - "'self'"
+    - http://localhost:3000
+```
+
 
 ## Development
 

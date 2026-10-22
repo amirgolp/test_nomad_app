@@ -1,0 +1,17 @@
+# Script-level Streamlit config, picked up because it sits next to page.py.
+# The app runs inside the NOMAD process: no file watching, no telemetry and no
+# developer tooling.
+
+[global]
+developmentMode = false
+
+[server]
+headless = true
+runOnSave = false
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "viewer"
