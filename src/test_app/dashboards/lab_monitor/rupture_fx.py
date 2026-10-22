@@ -14,9 +14,10 @@ import streamlit as st
 
 from test_app.dashboards.lab_monitor.simulator import RUPTURE_COUNTDOWN_S, Reading
 
-# The page wraps the pressure gauge in st.container(key=...), which Streamlit
-# renders with this CSS class.
-ANCHOR_CLASS = 'st-key-pressure-gauge'
+# Key of the pressure gauge. Streamlit renders an element with a key in a
+# container with this CSS class.
+ANCHOR_KEY = 'pressure-gauge'
+ANCHOR_CLASS = f'st-key-{ANCHOR_KEY}'
 
 
 _ASSETS = Path(__file__).parent

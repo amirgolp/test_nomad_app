@@ -1,18 +1,18 @@
 .lab-fx { position: fixed; pointer-events: none; z-index: 1000; }
 .lab-countdown {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  font-family: "Source Sans Pro", system-ui, sans-serif; color: #c62828;
+  font-family: var(--lab-fx-font, system-ui, sans-serif); color: #c62828;
 }
 .lab-countdown svg { position: absolute; inset: 0; margin: auto; overflow: visible; }
-.lab-countdown .ring-bg { fill: rgba(255, 255, 255, 0.9); stroke: rgba(198, 40, 40, 0.25); }
+.lab-countdown .ring-bg { fill: color-mix(in srgb, var(--lab-fx-bg, #fff) 97%, transparent); stroke: rgba(198, 40, 40, 0.25); }
 .lab-countdown .ring { fill: none; stroke: #e53935; stroke-linecap: round; }
 .lab-countdown .digits {
   position: relative; font-size: 46px; font-weight: 700; line-height: 1;
-  font-variant-numeric: tabular-nums; text-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+  font-variant-numeric: tabular-nums; text-shadow: 0 0 12px var(--lab-fx-bg, #fff);
 }
 .lab-countdown .caption {
   position: relative; font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
-  text-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 8px var(--lab-fx-bg, #fff);
 }
 .lab-countdown.tick .digits { animation: lab-tick 0.45s ease-out; }
 .lab-countdown.final .digits { color: #b71c1c; }
@@ -23,8 +23,8 @@
 .lab-stamp { display: flex; align-items: center; justify-content: center; }
 .lab-stamp span {
   border: 4px solid #c62828; color: #c62828; border-radius: 6px; padding: 4px 14px;
-  font: 800 26px/1.1 "Source Sans Pro", system-ui, sans-serif; letter-spacing: 0.08em;
-  transform: rotate(-12deg); background: rgba(255, 255, 255, 0.75);
+  font: 800 26px/1.1 var(--lab-fx-font, system-ui, sans-serif); letter-spacing: 0.08em;
+  transform: rotate(-12deg); background: color-mix(in srgb, var(--lab-fx-bg, #fff) 75%, transparent);
   animation: lab-stamp 0.35s cubic-bezier(.2, 1.6, .5, 1) both;
 }
 @keyframes lab-stamp {

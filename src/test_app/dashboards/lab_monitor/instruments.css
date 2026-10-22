@@ -1,0 +1,100 @@
+/* Shared by the gauge, trends and annunciator components. Each renders in its
+   own shadow root; colours and fonts come from Streamlit's theme variables. */
+:host { display: block; }
+.gauge, .trends, .annunciator {
+  font-family: var(--st-font);
+  color: var(--st-text-color);
+}
+
+/* Gauge */
+.gauge { text-align: center; }
+.gauge .title {
+  font-size: 0.95rem; font-weight: 600; line-height: 1.5;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gauge .dial { display: block; width: 100%; max-width: 300px; height: auto; margin: 0 auto; overflow: visible; }
+.gauge .track, .gauge .bar { fill: none; stroke-width: 14; }
+.gauge .track { stroke: var(--st-secondary-background-color); }
+.gauge .bar { stroke: var(--st-primary-color); stroke-dasharray: 0 100; }
+.gauge[data-level="warning"] .bar { stroke: var(--st-orange-color); }
+.gauge[data-level="critical"] .bar { stroke: var(--st-red-color); }
+.gauge .bands path { fill: none; stroke-width: 4; }
+.gauge .bands .good { stroke: var(--st-green-color); }
+.gauge .bands .warning { stroke: var(--st-orange-color); }
+.gauge .bands .critical { stroke: var(--st-red-color); }
+.gauge .ticks line { stroke: var(--st-border-color); stroke-width: 1; }
+.gauge .ticks text { font-size: 9px; fill: var(--st-gray-text-color); }
+.gauge .target {
+  stroke: var(--st-text-color); stroke-width: 2.5; stroke-linecap: round;
+  transform-box: view-box; transform-origin: 110px 104px;
+}
+.gauge .value {
+  font-size: 24px; font-weight: 600; text-anchor: middle; fill: var(--st-text-color);
+  font-variant-numeric: tabular-nums;
+}
+.gauge[data-level="warning"] .value { fill: var(--st-orange-text-color); }
+.gauge[data-level="critical"] .value { fill: var(--st-red-text-color); }
+.gauge .unit { font-size: 11px; text-anchor: middle; fill: var(--st-gray-text-color); }
+.gauge .caption {
+  font-size: 0.8rem; line-height: 1.4; color: var(--st-gray-text-color);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gauge.ready .bar { transition: stroke-dasharray 0.6s ease, stroke 0.3s; }
+.gauge.ready .target { transition: transform 0.6s ease; }
+
+/* Trends */
+.trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px 24px; }
+.trends .panel { position: relative; min-width: 0; }
+.trends .head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+  font-size: 0.85rem; min-height: 1.5em;
+}
+.trends .name { font-weight: 600; }
+.trends .legend { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--st-gray-text-color); font-size: 0.75rem; }
+.trends i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.trends .plot { display: block; width: 100%; overflow: visible; }
+.trends .grid { stroke: var(--st-border-color-light); stroke-width: 1; }
+.trends .ylabel, .trends .xlabel { font-size: 10px; fill: var(--st-gray-text-color); font-variant-numeric: tabular-nums; }
+.trends .ylabel { text-anchor: end; dominant-baseline: middle; }
+.trends .line { fill: none; stroke-width: 1.6; stroke-linejoin: round; }
+.trends .cursor line { stroke: var(--st-gray-color); stroke-dasharray: 3 3; }
+.trends .cursor circle { stroke: var(--st-background-color); stroke-width: 1.5; }
+.trends .hover { fill: transparent; cursor: crosshair; }
+.trends .tooltip {
+  position: absolute; top: 28px; pointer-events: none; z-index: 1;
+  display: flex; flex-direction: column; gap: 2px; padding: 6px 8px;
+  font-size: 0.75rem; white-space: nowrap; font-variant-numeric: tabular-nums;
+  background: var(--st-background-color); border: 1px solid var(--st-border-color);
+  border-radius: var(--st-base-radius); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.trends .tooltip[hidden] { display: none; }
+
+/* Annunciator */
+.annunciator { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.annunciator .tile {
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 12px;
+  border: 1px solid var(--st-border-color-light); border-radius: var(--st-base-radius);
+  border-left: 4px solid var(--st-green-color);
+  background: var(--st-secondary-background-color);
+  transition: background-color 0.3s, border-color 0.3s;
+}
+.annunciator .label {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--st-gray-text-color);
+}
+.annunciator .text {
+  font-size: 0.85rem; line-height: 1.3; min-height: 2.6em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.annunciator .tile[data-level="warning"] {
+  background: var(--st-orange-background-color); border-color: var(--st-orange-color);
+}
+.annunciator .tile[data-level="warning"] .text { color: var(--st-orange-text-color); }
+.annunciator .tile[data-level="critical"] {
+  background: var(--st-red-background-color); border-color: var(--st-red-color);
+}
+.annunciator .tile[data-level="critical"] .text { color: var(--st-red-text-color); font-weight: 600; }
+@media (prefers-reduced-motion: no-preference) {
+  .annunciator .tile[data-level="critical"] { animation: lab-alarm 1.2s ease-in-out infinite; }
+}
+@keyframes lab-alarm { 50% { border-left-color: transparent; } }

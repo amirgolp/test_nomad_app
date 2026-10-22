@@ -15,3 +15,60 @@ gatherUsageStats = false
 
 [client]
 toolbarMode = "viewer"
+
+# NOMAD's light and dark palettes (nomad-gui src/components/theme/
+# themeOptions.ts). With both defined, Streamlit follows the system setting;
+# inside the GUI, nomad_embed.py switches to the GUI's mode. The backgrounds
+# are the GUI's paper colour, which is what surrounds the embedded dashboard.
+[theme]
+font = "Titillium Web:https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap, sans-serif"
+baseRadius = "4px"
+buttonRadius = "4px"
+
+[theme.light]
+primaryColor = "#2A4CDF"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F8F8FA"
+textColor = "#1D1D1D"
+linkColor = "#2A4CDF"
+borderColor = "#E0E0E0"
+redColor = "#C10007"
+redTextColor = "#991B1B"
+redBackgroundColor = "#FEF2F2"
+orangeColor = "#ED6C02"
+orangeTextColor = "#BB4D0E"
+orangeBackgroundColor = "#FFFBEB"
+greenColor = "#007A55"
+greenTextColor = "#166534"
+greenBackgroundColor = "#ECFDF5"
+blueColor = "#1447E6"
+blueTextColor = "#075985"
+blueBackgroundColor = "#EFF6FF"
+chartCategoricalColors = ["#2A4CDF", "#008564", "#976D2B", "#2775DC", "#2A8080", "#947100", "#A06464", "#7A6FA0"]
+
+[theme.light.sidebar]
+backgroundColor = "#F8F8FA"
+
+[theme.dark]
+primaryColor = "#8B8CEC"
+backgroundColor = "#1C2026"
+secondaryBackgroundColor = "#25262D"
+textColor = "#D9D9DA"
+linkColor = "#8B8CEC"
+borderColor = "#3A3E45"
+redColor = "#F87171"
+redTextColor = "#FECACA"
+redBackgroundColor = "#5C1A1F"
+orangeColor = "#FFB74D"
+orangeTextColor = "#FFE5C4"
+orangeBackgroundColor = "#88522F"
+greenColor = "#2FA685"
+greenTextColor = "#C4FFE0"
+greenBackgroundColor = "#37674C"
+blueColor = "#4A9FFF"
+blueTextColor = "#BAE6FD"
+blueBackgroundColor = "#355F8B"
+chartCategoricalColors = ["#BAC3FF", "#2FA685", "#BF8A36", "#4A9FFF", "#2F8F8F", "#FFC700", "#C19A9A", "#8E84AE"]
+
+[theme.dark.sidebar]
+backgroundColor = "#121212"

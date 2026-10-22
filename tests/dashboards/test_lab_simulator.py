@@ -1,6 +1,7 @@
 import pytest
 
 from test_app.dashboards.lab_monitor.simulator import (
+    ALARM_SOURCES,
     ATMOSPHERE_MBAR,
     OVERPRESSURE_MBAR,
     RUPTURE_COUNTDOWN_S,
@@ -81,9 +82,14 @@ def test_unknown_control_rejected():
         make_simulator().update_controls(warp_drive=True)
 
 
-def overpressurise(simulator, until):
+def overpressurise(simulator, until, start=5.0):
+    # Every simulation step from `start`, so the countdown's start is seen.
     simulator.update_controls(gas_inlet_stuck=True)
-    return [simulator.advance_to(float(t)) for t in range(10, until, 1)]
+    steps = int((until - start) / LabSimulator.STEP_SECONDS)
+    return [
+        simulator.advance_to(start + i * LabSimulator.STEP_SECONDS)
+        for i in range(1, steps)
+    ]
 
 
 def test_stuck_inlet_starts_rupture_countdown():
@@ -98,7 +104,9 @@ def test_stuck_inlet_starts_rupture_countdown():
     assert first.rupture_at - first.timestamp == pytest.approx(
         RUPTURE_COUNTDOWN_S, abs=0.5
     )
-    assert any('rupture in' in a.message for a in alarms(first, simulator.controls))
+    assert any(
+        'rupture in' in a.message.lower() for a in alarms(first, simulator.controls)
+    )
 
 
 def test_closing_inlet_cancels_countdown():
@@ -138,3 +146,43 @@ def test_countdown_ends_in_rupture_until_reset():
     reading = simulator.advance_to(121.0)
     assert reading.ruptured_at is None
     assert not simulator.controls.gas_inlet_stuck
+
+
+@pytest.mark.parametrize(
+    'controls',
+    [
+        {'leak': True},
+        {'cooling_valve_open': False},
+        {'ln2_auto_refill': False},
+        {'heater_setpoint_c': 20.0},
+        {'gas_inlet_stuck': True},
+    ],
+)
+def test_alarms_have_known_sources(controls):
+    simulator = make_simulator()
+    simulator.advance_to(300.0)
+    simulator.update_controls(**controls)
+    raised = []
+    for t in range(310, 3000, 10):
+        raised += alarms(simulator.advance_to(float(t)), simulator.controls)
+
+    assert raised
+    assert {a.source for a in raised} <= set(ALARM_SOURCES)
+
+
+@pytest.mark.parametrize(
+    'controls',
+    [{}, {'argon_setpoint_sccm': 0.0}],
+    ids=['process', 'base-vacuum'],
+)
+def test_stuck_inlet_ruptures_within_seconds(controls):
+    simulator = make_simulator(**controls)
+    simulator.advance_to(600.0)
+    simulator.update_controls(gas_inlet_stuck=True)
+    t = 600.0
+    while simulator.advance_to(t).ruptured_at is None:
+        t += 0.5
+        assert t < 620, 'no rupture'
+
+    # About 2 s to over-pressure, then the countdown.
+    assert simulator.advance_to(t).ruptured_at - 600.0 == pytest.approx(7.0, abs=0.5)

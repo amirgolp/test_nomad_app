@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Plugin Workspace</title>
+<title>My Awesome Workspace</title>
 <style>
   :root {
     --bg: #f5f7fa;
@@ -129,7 +129,7 @@
 </head>
 <body>
 <header>
-  <h1>Plugin Workspace</h1>
+  <h1>My Awesome Workspace</h1>
   <span class="chip muted" id="plugin" hidden></span>
   <span class="user" id="user"></span>
   <span class="spacer"></span>
@@ -272,6 +272,21 @@
     new MutationObserver(apply).observe(parentRoot, {
       attributes: true, attributeFilter: ['data-mui-color-scheme', 'class', 'style']
     });
+    return apply;
+  }
+
+  function followGuiColorMode(reapplyParentTheme) {
+    // The GUI posts its color mode to embedded dashboards, which works across
+    // origins too. Answering our request, and again on every switch.
+    if (window.parent === window) return;
+    window.addEventListener('message', function (event) {
+      var message = event.data;
+      if (event.source !== window.parent || !message || message.type !== 'nomad:color-mode') return;
+      if (message.mode !== 'light' && message.mode !== 'dark') return;
+      document.documentElement.setAttribute('data-mui-color-scheme', message.mode);
+      if (reapplyParentTheme) reapplyParentTheme();
+    });
+    window.parent.postMessage({type: 'nomad:color-mode-request'}, '*');
   }
 
   function request(url, options) {
@@ -609,7 +624,7 @@
 
   $('refresh').addEventListener('click', function () { load(); });
 
-  adoptParentTheme();
+  followGuiColorMode(adoptParentTheme());
   dashboard('api/plugin').then(function (response) {
     schemas = response.schemas;
     var plugin = response.plugin;

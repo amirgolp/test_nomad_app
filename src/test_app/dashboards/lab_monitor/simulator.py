@@ -20,11 +20,20 @@ SCCM_TO_MBAR_L_PER_S = 0.0169
 PRESSURE_ALARM_MBAR = 1e-2
 # Above this the chamber is over-pressurised and a rupture countdown starts.
 OVERPRESSURE_MBAR = 1200.0
-RUPTURE_COUNTDOWN_S = 10.0
+RUPTURE_COUNTDOWN_S = 5.0
 MAX_PRESSURE_MBAR = 3000.0
 OVERSHOOT_ALARM_C = 30.0
 CHILLER_ALARM_C = 24.0
 LN2_LOW_ALARM_L = 25.0
+
+# Subsystems that raise alarms, with their display names.
+ALARM_SOURCES = {
+    'chamber': 'Chamber',
+    'heater': 'Heater',
+    'cooling': 'Cooling water',
+    'chiller': 'Chiller',
+    'ln2': 'LN2 dewar',
+}
 
 
 @dataclass(frozen=True)
@@ -60,6 +69,8 @@ class Reading:
 class Alarm:
     severity: str  # 'warning' or 'critical'
     message: str
+    # The subsystem raising it, one of ALARM_SOURCES.
+    source: str
 
 
 @dataclass
@@ -85,6 +96,9 @@ class LabSimulator:
     OUTGASSING_MBAR_L_PER_S = 2e-5
     LEAK_MBAR_L_PER_S = 2.0
     STUCK_INLET_PRESSURE_MBAR = 2500.0
+    # Fast enough to pass OVERPRESSURE_MBAR about 2 s after the inlet sticks,
+    # from process conditions or base vacuum alike.
+    STUCK_INLET_TAU_S = 0.55
     LN2_CAPACITY_L = 100.0
     LN2_DRAIN_L_PER_S = 0.05
     LN2_REFILL_L_PER_S = 1.0
@@ -185,7 +199,7 @@ class LabSimulator:
         if ruptured:
             target, tau = ATMOSPHERE_MBAR, 2.0
         elif c.gas_inlet_stuck:
-            target, tau = self.STUCK_INLET_PRESSURE_MBAR, 5.0
+            target, tau = self.STUCK_INLET_PRESSURE_MBAR, self.STUCK_INLET_TAU_S
         elif c.pump_on:
             gas_load = (
                 self.OUTGASSING_MBAR_L_PER_S
@@ -198,6 +212,7 @@ class LabSimulator:
         log_p = self._relax(math.log10(s.pressure_mbar), math.log10(target), tau, dt)
         s.pressure_mbar = 10**log_p
         self._update_rupture()
+        ruptured = s.ruptured_at is not None
 
         # Substrate heater: PI controller with an interlock on cooling water.
         s.heater_interlock = (
@@ -279,6 +294,7 @@ def alarms(reading: Reading, controls: Controls) -> list[Alarm]:
             Alarm(
                 'critical',
                 'Chamber ruptured by over-pressure. Reset the chamber to continue.',
+                'chamber',
             )
         ]
     if reading.rupture_at is not None:
@@ -286,13 +302,18 @@ def alarms(reading: Reading, controls: Controls) -> list[Alarm]:
         result.append(
             Alarm(
                 'critical',
-                f'Over-pressure {reading.pressure_mbar:.0f} mbar: chamber rupture in '
-                f'{remaining:.0f} s. Close the gas inlet!',
+                f'Rupture in {remaining:.0f} s at {reading.pressure_mbar:.0f} mbar. '
+                'Close the gas inlet!',
+                'chamber',
             )
         )
     if reading.heater_interlock:
         result.append(
-            Alarm('critical', 'Cooling water flow too low: heater interlock tripped.')
+            Alarm(
+                'critical',
+                'Cooling water flow too low: heater interlock tripped.',
+                'cooling',
+            )
         )
     if (
         controls.pump_on
@@ -304,14 +325,19 @@ def alarms(reading: Reading, controls: Controls) -> list[Alarm]:
                 'critical',
                 f'Chamber pressure {reading.pressure_mbar:.1e} mbar while pumping: '
                 'check for a leak.',
+                'chamber',
             )
         )
     if reading.substrate_temperature_c > controls.heater_setpoint_c + OVERSHOOT_ALARM_C:
-        result.append(Alarm('warning', 'Substrate temperature above setpoint.'))
+        result.append(
+            Alarm('warning', 'Substrate temperature above setpoint.', 'heater')
+        )
     if reading.chiller_temperature_c > CHILLER_ALARM_C:
         result.append(
-            Alarm('warning', f'Chiller water above {CHILLER_ALARM_C:.0f} °C.')
+            Alarm(
+                'warning', f'Chiller water above {CHILLER_ALARM_C:.0f} °C.', 'chiller'
+            )
         )
     if reading.ln2_level_l < LN2_LOW_ALARM_L and not reading.ln2_refilling:
-        result.append(Alarm('warning', 'LN2 dewar level low.'))
+        result.append(Alarm('warning', 'LN2 dewar level low.', 'ln2'))
     return result

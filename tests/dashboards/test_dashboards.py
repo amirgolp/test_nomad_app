@@ -87,7 +87,7 @@ def test_workspace_index(workspace):
     response = client.get('/')
 
     assert response.status_code == 200
-    assert '<title>Plugin Workspace</title>' in response.text
+    assert '<title>My Awesome Workspace</title>' in response.text
 
 
 def test_workspace_plugin(workspace):

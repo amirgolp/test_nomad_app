@@ -1,29 +1,30 @@
-import math
 import time
 from collections import deque
-from datetime import datetime
+from pathlib import Path
 
-import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
-from plotly.subplots import make_subplots
 
-from test_app.dashboards.lab_monitor import oasis, rupture_fx
+from test_app.dashboards.lab_monitor import instruments, nomad_embed, oasis, rupture_fx
+from test_app.dashboards.lab_monitor.instruments import CRITICAL, GOOD, WARNING
 from test_app.dashboards.lab_monitor.simulator import (
+    ALARM_SOURCES,
+    CHILLER_ALARM_C,
     OVERPRESSURE_MBAR,
     LabSimulator,
     Reading,
     alarms,
 )
 
-GOOD = 'rgba(46, 125, 50, 0.22)'
-WARN = 'rgba(237, 108, 2, 0.22)'
-BAD = 'rgba(198, 40, 40, 0.22)'
-BAR = '#4f6bed'
-
 SAMPLE_INTERVAL_SECONDS = 2
+# Points per trend line; the history holds a reading every half second.
+TREND_POINTS = 300
 
-st.set_page_config(page_title='Lab Monitor', layout='wide')
+st.set_page_config(
+    page_title='Lab Monitor',
+    page_icon=str(Path(__file__).parent / 'icon.svg'),
+    layout='wide',
+)
+nomad_embed.apply()
 
 
 @st.cache_resource
@@ -50,180 +51,160 @@ def sample_system_stats() -> list[dict]:
     return list(history)
 
 
-def gauge(  # noqa: PLR0913
-    title: str,
-    value: float,
-    *,
-    axis_range: tuple[float, float],
-    bands: list[tuple[float, float, str]],
-    unit: str = '',
-    value_format: str = '.1f',
-    target: float | None = None,
-    label: str | None = None,
-    tickvals: list[float] | None = None,
-    ticktext: list[str] | None = None,
-) -> go.Figure:
-    gauge_spec = {
-        'axis': {'range': list(axis_range), 'tickvals': tickvals, 'ticktext': ticktext},
-        'bar': {'color': BAR, 'thickness': 0.3},
-        'steps': [{'range': [lo, hi], 'color': color} for lo, hi, color in bands],
-    }
-    if target is not None:
-        gauge_spec['threshold'] = {
-            'line': {'color': BAR, 'width': 3},
-            'thickness': 0.85,
-            'value': target,
-        }
-    fig = go.Figure(
-        go.Indicator(
-            mode='gauge' if label else 'gauge+number',
-            value=value,
-            number={'suffix': f' {unit}' if unit else '', 'valueformat': value_format},
-            title={'text': title, 'font': {'size': 15}},
-            gauge=gauge_spec,
-        )
-    )
-    if label:
-        fig.add_annotation(
-            x=0.5, y=0.08, text=label, showarrow=False, font={'size': 26}
-        )
-    fig.update_layout(height=220, margin={'l': 40, 'r': 40, 't': 48, 'b': 8})
-    return fig
-
-
-def show(fig: go.Figure, key: str) -> None:
-    st.plotly_chart(fig, key=key, config={'displayModeBar': False})
-
-
 def render_gauges(r: Reading) -> None:
     controls = get_simulator().controls
     row = st.columns(3)
     with row[0]:
-        overpressure = math.log10(OVERPRESSURE_MBAR)
-        # The rupture countdown and explosion are drawn over this container.
-        with st.container(key='pressure-gauge'):
-            show(
-                gauge(
-                    'Chamber pressure',
-                    math.log10(r.pressure_mbar),
-                    axis_range=(-8, 3.5),
-                    bands=[
-                        (-8, -2, GOOD),
-                        (-2, overpressure, WARN),
-                        (overpressure, 3.5, BAD),
-                    ],
-                    label=f'{r.pressure_mbar:.2e} mbar',
-                    tickvals=[-8, -6, -4, -2, 0, 2, 3],
-                    ticktext=['1e-8', '1e-6', '1e-4', '0.01', '1', '100', '1000'],
-                ),
-                'g-pressure',
-            )
+        # The rupture countdown and explosion are drawn over this gauge.
+        instruments.gauge(
+            rupture_fx.ANCHOR_KEY,
+            'Chamber pressure',
+            r.pressure_mbar,
+            log=True,
+            axis_range=(1e-8, 10**3.5),
+            bands=[
+                (1e-8, 1e-2, GOOD),
+                (1e-2, OVERPRESSURE_MBAR, WARNING),
+                (OVERPRESSURE_MBAR, 10**3.5, CRITICAL),
+            ],
+            text=f'{r.pressure_mbar:.2e}',
+            unit='mbar',
+            ticks=[
+                (10.0**e, label)
+                for e, label in [
+                    (-8, '1e-8'),
+                    (-6, '1e-6'),
+                    (-4, '1e-4'),
+                    (-2, '0.01'),
+                    (0, '1'),
+                    (2, '100'),
+                    (3, '1000'),
+                ]
+            ],
+            caption=f'Turbo pump {"on" if controls.pump_on else "off"}'
+            + (' · gas inlet stuck open' if controls.gas_inlet_stuck else ''),
+        )
         rupture_fx.show(r)
     with row[1]:
-        show(
-            gauge(
-                'Substrate temperature',
-                r.substrate_temperature_c,
-                axis_range=(0, 800),
-                bands=[(0, 650, GOOD), (650, 720, WARN), (720, 800, BAD)],
-                unit='°C',
-                value_format='.0f',
-                target=controls.heater_setpoint_c,
-            ),
+        instruments.gauge(
             'g-temperature',
-        )
-        st.caption(
-            f'Heater {r.heater_power_pct:.0f} % · setpoint '
+            'Substrate temperature',
+            r.substrate_temperature_c,
+            axis_range=(0, 800),
+            bands=[(0, 650, GOOD), (650, 720, WARNING), (720, 800, CRITICAL)],
+            unit='°C',
+            value_format='.0f',
+            target=controls.heater_setpoint_c,
+            caption=f'Heater {r.heater_power_pct:.0f} % · setpoint '
             f'{controls.heater_setpoint_c:.0f} °C'
-            + (' · **interlock tripped**' if r.heater_interlock else '')
+            + (' · interlock tripped' if r.heater_interlock else ''),
         )
     with row[2]:
-        show(
-            gauge(
-                'Argon flow (MFC)',
-                r.argon_flow_sccm,
-                axis_range=(0, 100),
-                bands=[(0, 80, GOOD), (80, 100, WARN)],
-                unit='sccm',
-                target=controls.argon_setpoint_sccm,
-            ),
+        instruments.gauge(
             'g-argon',
+            'Argon flow (MFC)',
+            r.argon_flow_sccm,
+            axis_range=(0, 100),
+            bands=[(0, 80, GOOD), (80, 100, WARNING)],
+            unit='sccm',
+            target=controls.argon_setpoint_sccm,
+            caption=f'Setpoint {controls.argon_setpoint_sccm:.0f} sccm',
         )
 
     row = st.columns(3)
     with row[0]:
-        show(
-            gauge(
-                'Cooling water flow',
-                r.cooling_water_flow_lpm,
-                axis_range=(0, 12),
-                bands=[(0, 2, BAD), (2, 5, WARN), (5, 12, GOOD)],
-                unit='L/min',
-            ),
+        instruments.gauge(
             'g-cooling',
+            'Cooling water flow',
+            r.cooling_water_flow_lpm,
+            axis_range=(0, 12),
+            bands=[(0, 2, CRITICAL), (2, 5, WARNING), (5, 12, GOOD)],
+            unit='L/min',
+            caption=f'Valve {"open" if controls.cooling_valve_open else "closed"}',
         )
     with row[1]:
-        show(
-            gauge(
-                'Chiller water temperature',
-                r.chiller_temperature_c,
-                axis_range=(10, 30),
-                bands=[(10, 22, GOOD), (22, 24, WARN), (24, 30, BAD)],
-                unit='°C',
-            ),
+        instruments.gauge(
             'g-chiller',
+            'Chiller water temperature',
+            r.chiller_temperature_c,
+            axis_range=(10, 30),
+            bands=[
+                (10, 22, GOOD),
+                (22, CHILLER_ALARM_C, WARNING),
+                (CHILLER_ALARM_C, 30, CRITICAL),
+            ],
+            unit='°C',
+            caption=f'Alarm above {CHILLER_ALARM_C:.0f} °C',
         )
     with row[2]:
-        show(
-            gauge(
-                'LN2 dewar level',
-                r.ln2_level_l,
-                axis_range=(0, LabSimulator.LN2_CAPACITY_L),
-                bands=[(0, 15, BAD), (15, 25, WARN), (25, 100, GOOD)],
-                unit='L',
-                value_format='.0f',
-            ),
-            'g-ln2',
-        )
         if r.ln2_refilling:
-            st.caption('Refilling from the supply tank…')
+            ln2_caption = 'Refilling from the supply tank…'
+        else:
+            ln2_caption = f'Auto-refill {"on" if controls.ln2_auto_refill else "off"}'
+        instruments.gauge(
+            'g-ln2',
+            'LN2 dewar level',
+            r.ln2_level_l,
+            axis_range=(0, LabSimulator.LN2_CAPACITY_L),
+            bands=[(0, 15, CRITICAL), (15, 25, WARNING), (25, 100, GOOD)],
+            unit='L',
+            value_format='.0f',
+            caption=ln2_caption,
+        )
 
 
 def render_trends(history: list[Reading]) -> None:
-    times = [datetime.fromtimestamp(r.timestamp) for r in history]
-    fig = make_subplots(
-        rows=2,
-        cols=2,
-        shared_xaxes=True,
-        vertical_spacing=0.14,
-        horizontal_spacing=0.08,
-        subplot_titles=(
-            'Pressure (mbar)',
-            'Temperatures (°C)',
-            'Flows',
-            'LN2 level (L)',
-        ),
+    history = instruments.downsample(history, TREND_POINTS)
+
+    def values(name: str) -> list[float]:
+        return [getattr(r, name) for r in history]
+
+    instruments.trends(
+        'trends',
+        [r.timestamp for r in history],
+        [
+            instruments.trend_panel(
+                'Pressure (mbar)', {'Pressure': values('pressure_mbar')}, log=True
+            ),
+            instruments.trend_panel(
+                'Temperatures (°C)',
+                {
+                    'Substrate': values('substrate_temperature_c'),
+                    'Chiller': values('chiller_temperature_c'),
+                },
+            ),
+            instruments.trend_panel(
+                'Flows',
+                {
+                    'Argon (sccm)': values('argon_flow_sccm'),
+                    'Cooling water (L/min)': values('cooling_water_flow_lpm'),
+                },
+                y_range=(0, None),
+            ),
+            instruments.trend_panel(
+                'LN2 level (L)',
+                {'LN2': values('ln2_level_l')},
+                y_range=(0, LabSimulator.LN2_CAPACITY_L),
+            ),
+        ],
     )
 
-    def line(name, values, row, col):
-        fig.add_trace(
-            go.Scatter(x=times, y=values, name=name, mode='lines'), row=row, col=col
+
+def alarm_tiles(active: list) -> list[dict]:
+    tiles = []
+    for source, label in ALARM_SOURCES.items():
+        raised = sorted(
+            (a for a in active if a.source == source),
+            key=lambda a: a.severity != CRITICAL,
         )
-
-    line('Pressure', [r.pressure_mbar for r in history], 1, 1)
-    line('Substrate', [r.substrate_temperature_c for r in history], 1, 2)
-    line('Chiller', [r.chiller_temperature_c for r in history], 1, 2)
-    line('Argon (sccm)', [r.argon_flow_sccm for r in history], 2, 1)
-    line('Cooling water (L/min)', [r.cooling_water_flow_lpm for r in history], 2, 1)
-    line('LN2', [r.ln2_level_l for r in history], 2, 2)
-    fig.update_yaxes(type='log', exponentformat='power', row=1, col=1)
-    fig.update_layout(
-        height=480,
-        margin={'l': 8, 'r': 8, 't': 32, 'b': 8},
-        legend={'orientation': 'h', 'y': -0.08},
-        hovermode='x unified',
-    )
-    show(fig, 'trends')
+        tiles.append(
+            {
+                'label': label,
+                'level': raised[0].severity if raised else GOOD,
+                'text': ' '.join(a.message for a in raised) if raised else 'OK',
+            }
+        )
+    return tiles
 
 
 def lab_panel() -> None:
@@ -231,12 +212,7 @@ def lab_panel() -> None:
     history = simulator.history()
     reading = history[-1]
 
-    active = alarms(reading, simulator.controls)
-    if not active:
-        st.success('All systems nominal.')
-    for alarm in active:
-        (st.error if alarm.severity == 'critical' else st.warning)(alarm.message)
-
+    instruments.annunciator('alarms', alarm_tiles(alarms(reading, simulator.controls)))
     render_gauges(reading)
     with st.expander('Trends (last 10 minutes)', expanded=True):
         render_trends(history)
@@ -263,47 +239,38 @@ def oasis_panel() -> None:
     s = history[-1]
 
     row = st.columns(3)
-    usage_bands = [(0, 70, GOOD), (70, 90, WARN), (90, 100, BAD)]
+    usage_bands = [(0, 70, GOOD), (70, 90, WARNING), (90, 100, CRITICAL)]
     with row[0]:
-        show(
-            gauge(
-                f'Host CPU ({s["host_cpu_count"]} cores)',
-                s['host_cpu_percent'],
-                axis_range=(0, 100),
-                bands=usage_bands,
-                unit='%',
-            ),
+        instruments.gauge(
             'g-cpu',
+            f'Host CPU ({s["host_cpu_count"]} cores)',
+            s['host_cpu_percent'],
+            axis_range=(0, 100),
+            bands=usage_bands,
+            unit='%',
+            caption=f'Load average {s["host_load_average"][0]:.2f}',
         )
     with row[1]:
-        show(
-            gauge(
-                'Host memory',
-                s['host_memory_percent'],
-                axis_range=(0, 100),
-                bands=usage_bands,
-                unit='%',
-            ),
+        instruments.gauge(
             'g-memory',
-        )
-        st.caption(
-            f'{format_bytes(s["host_memory_used_bytes"])} of '
-            f'{format_bytes(s["host_memory_total_bytes"])}'
+            'Host memory',
+            s['host_memory_percent'],
+            axis_range=(0, 100),
+            bands=usage_bands,
+            unit='%',
+            caption=f'{format_bytes(s["host_memory_used_bytes"])} of '
+            f'{format_bytes(s["host_memory_total_bytes"])}',
         )
     with row[2]:
-        show(
-            gauge(
-                'Disk (NOMAD data)',
-                s['disk_percent'],
-                axis_range=(0, 100),
-                bands=usage_bands,
-                unit='%',
-            ),
+        instruments.gauge(
             'g-disk',
-        )
-        st.caption(
-            f'{format_bytes(s["disk_used_bytes"])} of '
-            f'{format_bytes(s["disk_total_bytes"])} · `{s["disk_path"]}`'
+            'Disk (NOMAD data)',
+            s['disk_percent'],
+            axis_range=(0, 100),
+            bands=usage_bands,
+            unit='%',
+            caption=f'{format_bytes(s["disk_used_bytes"])} of '
+            f'{format_bytes(s["disk_total_bytes"])} · {s["disk_path"]}',
         )
 
     row = st.columns(4)
@@ -347,15 +314,23 @@ def oasis_panel() -> None:
             + (f' · {content["deployment"]}' if content['deployment'] else '')
         )
 
-    frame = pd.DataFrame(
-        {
-            'Host CPU %': [h['host_cpu_percent'] for h in history],
-            'Host memory %': [h['host_memory_percent'] for h in history],
-            'NOMAD CPU %': [h['nomad_cpu_percent'] for h in history],
-        },
-        index=[datetime.fromtimestamp(h['timestamp']) for h in history],
+    usage = {
+        'Host CPU': [h['host_cpu_percent'] for h in history],
+        'Host memory': [h['host_memory_percent'] for h in history],
+        'NOMAD CPU': [h['nomad_cpu_percent'] for h in history],
+    }
+    instruments.trends(
+        'oasis-trends',
+        [h['timestamp'] for h in history],
+        [
+            instruments.trend_panel(
+                'Usage (%)',
+                usage,
+                # NOMAD CPU counts every core, so it can exceed 100 %.
+                y_range=(0, max(100, *(max(v) for v in usage.values()))),
+            )
+        ],
     )
-    st.line_chart(frame, height=200)
 
 
 def sync_control(name: str) -> None:

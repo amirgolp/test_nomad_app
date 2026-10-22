@@ -1,0 +1,7 @@
+/* This component renders nothing; keep it out of the layout. */
+.st-key-nomad-embed { display: none; }
+
+/* Refreshes are continuous: don't fade elements while they rerun, and don't
+   flash the "Running" indicator every second. */
+[data-stale="true"] { opacity: 1 !important; transition: none !important; }
+[data-testid="stStatusWidget"] { visibility: hidden; }

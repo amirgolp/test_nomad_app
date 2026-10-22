@@ -1,5 +1,9 @@
 export default function (component) {
-  const { data } = component;
+  const { data, parentElement } = component;
+  // The overlays live on <body>, outside the component: hand them the theme.
+  const theme = getComputedStyle(parentElement);
+  document.documentElement.style.setProperty('--lab-fx-bg', theme.getPropertyValue('--st-background-color').trim() || '#fff');
+  document.documentElement.style.setProperty('--lab-fx-font', theme.getPropertyValue('--st-font').trim() || 'sans-serif');
   const fx = (window.__labRuptureFx ||= {
     deadline: null, played: null, lastSecond: null, countdown: null, stamp: null, raf: null, seen: 0,
   });
@@ -16,7 +20,7 @@ export default function (component) {
 
   const place = (node, rect, size) => {
     const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height * 0.58; // centre of the gauge arc
+    const cy = rect.top + rect.height * 0.6; // centre of the gauge dial
     Object.assign(node.style, {
       left: (cx - size / 2) + 'px', top: (cy - size / 2) + 'px',
       width: size + 'px', height: size + 'px',
@@ -46,7 +50,7 @@ export default function (component) {
     const rect = anchorRect();
     if (!rect) { showStamp(); return; } // gauge not on screen: skip the animation
     const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height * 0.58;
+    const y = rect.top + rect.height * 0.6;
 
     const flash = document.createElement('div');
     flash.className = 'lab-flash';
@@ -107,7 +111,7 @@ export default function (component) {
     }
     if (fx.countdown && fx.deadline !== null) {
       const remaining = Math.max(0, (fx.deadline - performance.now()) / 1000);
-      if (rect) place(fx.countdown, rect, Math.min(150, rect.height * 0.75));
+      if (rect) place(fx.countdown, rect, Math.min(140, rect.height * 0.66));
       const ring = fx.countdown.querySelector('.ring');
       const circumference = 2 * Math.PI * 44;
       ring.setAttribute('stroke-dasharray', circumference);
