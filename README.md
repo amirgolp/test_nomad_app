@@ -6,47 +6,51 @@ This `nomad` plugin was generated with `Cookiecutter` along with `@nomad`'s [`co
 
 ## Dashboards
 
-The plugin ships two dashboard entry points, which show up on the
-*Dashboards* page of the new NOMAD GUI. Both are hosted internally: `load()`
+The plugin ships three dashboard entry points, which show up on the
+*Dashboards* page of the new NOMAD GUI. Two are hosted internally: `load()`
 returns a FastAPI app that NOMAD mounts at
 `{api_base_path}/dashboards/{id_url_safe}/`. They run inside the NOMAD
-process, on NOMAD's origin, and receive the GUI's login cookie. (A dashboard
-can instead set `external_url`; NOMAD then mounts nothing and the GUI embeds
-or opens that URL.)
+process, on NOMAD's origin, and receive the GUI's login cookie. The third is
+external: it sets `external_url`, so NOMAD mounts nothing and the GUI embeds
+or opens that URL.
 
 | Entry point | URL slug | What it does |
 | --- | --- | --- |
-| `test_app.dashboards:lab_monitor_dashboard` | `lab-monitor` | Streamlit app with two tabs: *Lab equipment* shows live gauges of a simulated sputter chamber (pressure, substrate temperature, argon flow, cooling water, chiller, LN2 dewar) with controls and fault injection; *Computer* shows resource usage (CPU, memory, disk) and content statistics of the NOMAD Oasis. |
+| `test_app.dashboards:lab_monitor_dashboard` | `lab-monitor` | Page with two tabs: *Lab equipment* shows live gauges of a simulated sputter chamber (pressure, substrate temperature, argon flow, cooling water, chiller, LN2 dewar) with controls and fault injection; *Computer* shows resource usage (CPU, memory, disk) and content statistics of the NOMAD Oasis. |
 | `test_app.dashboards:plugin_workspace_dashboard` | `plugin-workspace` | *My Awesome Workspace*. Requires login. Creates projects and entries from the schemas of one plugin (picked from a dropdown, with a form generated from the schema), and shows the user's entries of those schemas. |
+| `test_app.dashboards:internet_archive_dashboard` | `internet-archive` | The Internet Archive (`https://archive.org/`). External: sets `external_url`, so NOMAD mounts nothing and the GUI embeds or opens archive.org directly. |
 
 How they work:
 
-- **Lab Monitor** mounts Streamlit's ASGI app (`st.App`, Streamlit >= 1.66)
-  inside NOMAD, so no separate Streamlit server is needed. The simulator
-  (`dashboards/lab_monitor/simulator.py`) has no Streamlit dependency. It is
-  advanced lazily whenever someone views it and is shared by all viewers
-  served by the same NOMAD process. With several API workers, each worker
-  simulates its own lab.
-  - Gauges, trend charts and the alarm tiles are Streamlit v2 components
-    (`instruments.py` with `gauge.js`, `trends.js`, `annunciator.js`). The
-    page refreshes every second or two; `st.plotly_chart` re-mounts a chart
-    whenever its figure changes, which made the page flicker, while a keyed
-    component keeps its DOM and only receives new data. The alarm tiles keep
-    the layout fixed when alarms come and go.
+- **Lab Monitor** is a static page (`dashboards/lab_monitor/static/`: plain
+  HTML, CSS and JavaScript modules, no build step) and a small JSON API in the
+  same FastAPI app (`server.py`): `GET api/lab`, `PATCH api/lab/controls`,
+  `POST api/lab/reset` and `GET api/oasis`. The page polls the API of the
+  visible tab every 1 to 10 s (every second while a rupture can happen, at
+  most every 5 s for the Oasis statistics) and pauses while it is hidden. All
+  URLs are relative, so it works under any mount path. The simulator
+  (`simulator.py`) is advanced lazily whenever someone polls and is shared by
+  all viewers served by the same NOMAD process; with several API workers, each
+  worker simulates its own lab. The controls are shared too: the page shows
+  the server's values, except for a control the viewer is changing.
+  - `views.py` decides everything the page shows (gauge positions as axis
+    fractions, alarm levels and texts, trend series), so the scripts only
+    draw. Gauges, trend charts and alarm tiles (`gauge.js`, `trends.js`,
+    `annunciator.js`) keep their DOM across refreshes and update it in place,
+    so the gauges glide to new values without flicker, and the alarm tiles
+    keep the layout fixed when alarms come and go.
   - The *Gas inlet stuck open* fault drives the chamber above
     1200 mbar within about 2 s. That starts a 5 s rupture countdown drawn over the pressure
     gauge; closing the inlet cancels it, otherwise the chamber ruptures with an
     explosion animation and stays broken until *Reset chamber*. The countdown
-    and animation are another v2 component (`rupture_fx.py`, `.js`, `.css`)
-    that ticks in the browser from the server's deadline.
-  - It uses NOMAD's light and dark palettes and font
-    (`.streamlit/config.toml`) and follows the GUI's colour mode: the GUI
-    posts `{type: 'nomad:color-mode', mode: 'light' | 'dark'}` to embedded
-    dashboards, in reply to a `{type: 'nomad:color-mode-request'}` and on
-    every switch. Streamlit chooses its theme when the page loads, so on a
-    mismatch the page reloads itself with Streamlit's
-    `embed_options=light_theme` or `dark_theme` (`nomad_embed.py`). Opened in
-    a tab, it follows the system setting.
+    and animation (`rupture_fx.js`, `.css`) tick in the browser from the
+    server's deadline.
+  - It uses NOMAD's light and dark palettes and font as CSS variables
+    (`app.css`, copied from the GUI's `themeOptions.ts`) and switches between
+    them without reloading. Embedded in the GUI on the same origin as NOMAD,
+    as in a deployed Oasis, it follows the GUI's colour mode (read from the
+    embedding page every second). Otherwise, e.g. under the Vite dev server or
+    opened in a tab, it follows the system setting, as the GUI does by default.
   - Its icon (`icon.svg`) is served by the dashboard itself at
     `/dashboards/lab-monitor/icon.svg`. The entry point fills in the
     absolute URL from NOMAD's configured public address when the GUI asks

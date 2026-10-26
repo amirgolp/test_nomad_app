@@ -37,7 +37,7 @@ lab_monitor_dashboard = LabMonitorDashboardEntryPoint(
     name='Lab Monitor',
     description=(
         'Live gauges of a (simulated) sputter chamber next to the resource usage '
-        'of this NOMAD Oasis. Built with Streamlit.'
+        'of this NOMAD Oasis.'
     ),
     id_url_safe='lab-monitor',
     launch_modes=['embedded', 'tab'],
@@ -51,4 +51,16 @@ plugin_workspace_dashboard = PluginWorkspaceDashboardEntryPoint(
     ),
     id_url_safe='plugin-workspace',
     launch_modes=['embedded', 'tab'],
+)
+
+internet_archive_dashboard = DashboardEntryPoint(
+    name='Internet Archive',
+    description=(
+        'The Internet Archive, a digital library of websites, books, audio, '
+        'video and software. An external dashboard: hosted by archive.org.'
+    ),
+    id_url_safe='internet-archive',
+    external_url='https://archive.org/',
+    icon='https://archive.org/offshoot_assets/apple-touch-icon.png',
+    launch_modes=['embedded'],
 )

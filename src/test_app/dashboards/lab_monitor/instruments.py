@@ -1,35 +1,13 @@
-"""Gauges, trend charts and the alarm panel of the Lab Monitor.
+"""Data of the Lab Monitor's gauges and trend charts.
 
-They are Streamlit v2 components rather than Plotly charts. The element
-identity of ``st.plotly_chart`` includes the figure, so every refresh with new
-readings re-mounted and redrew every chart, and the page flickered. A v2
-component with a key keeps its DOM across reruns and only receives the new
-data, which the browser applies in place, with transitions.
-
-Colours come from Streamlit's theme (the ``--st-*`` CSS variables that
-Streamlit sets for components), so the instruments follow its light and dark
-theme.
+The page draws them itself (``static/gauge.js``, ``static/trends.js``); the
+functions here turn readings into the data those scripts expect. Gauge
+positions are fractions of the axis, so the browser needs no knowledge of
+scales or units.
 """
 
 import math
 from collections.abc import Sequence
-from pathlib import Path
-
-import streamlit as st
-
-_ASSETS = Path(__file__).parent
-_CSS = (_ASSETS / 'instruments.css').read_text()
-
-
-def _component(name: str, js_file: str):
-    return st.components.v2.component(
-        name, css=_CSS, js=(_ASSETS / js_file).read_text()
-    )
-
-
-_gauge = _component('lab_gauge', 'gauge.js')
-_trends = _component('lab_trends', 'trends.js')
-_annunciator = _component('lab_annunciator', 'annunciator.js')
 
 # Levels of gauge bands and alarm tiles.
 GOOD = 'good'
@@ -89,8 +67,9 @@ def gauge_data(  # noqa: PLR0913
     }
 
 
-def gauge(key: str, title: str, value: float, **kwargs) -> None:
-    _gauge(key=key, data=gauge_data(title, value, **kwargs))
+def gauge(key: str, title: str, value: float, **kwargs) -> dict:
+    """A gauge with the key that identifies it on the page."""
+    return {'key': key, **gauge_data(title, value, **kwargs)}
 
 
 def downsample(values: Sequence, max_points: int) -> list:
@@ -117,15 +96,5 @@ def trend_panel(
     }
 
 
-def trends(key: str, timestamps: Sequence[float], panels: list[dict]) -> None:
-    _trends(key=key, data={'times': list(timestamps), 'panels': panels})
-
-
-def annunciator(key: str, tiles: list[dict]) -> None:
-    """A fixed row of tiles, one per subsystem, lit by its alarms.
-
-    Each tile is ``{'label': ..., 'level': GOOD | WARNING | CRITICAL,
-    'text': ...}``. Unlike a list of alerts, the layout does not change when
-    alarms come and go.
-    """
-    _annunciator(key=key, data={'tiles': tiles})
+def trends(timestamps: Sequence[float], panels: list[dict]) -> dict:
+    return {'times': list(timestamps), 'panels': panels}

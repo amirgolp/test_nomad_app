@@ -49,7 +49,7 @@ function yAxis(panel) {
 }
 
 function palette(host) {
-  const colours = getComputedStyle(host).getPropertyValue('--st-chart-categorical-colors');
+  const colours = getComputedStyle(host).getPropertyValue('--lab-chart-colors');
   return colours ? colours.split(',').map((c) => c.trim()) : ['#2A4CDF', '#008564', '#976D2B'];
 }
 

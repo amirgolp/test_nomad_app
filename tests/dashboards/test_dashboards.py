@@ -51,6 +51,20 @@ def test_entry_points():
     assert plugin_workspace_dashboard.schema_plugin is None
 
 
+def test_external_dashboard():
+    from test_app.dashboards import internet_archive_dashboard
+
+    # Nothing to mount: the GUI embeds or opens the external URL.
+    assert internet_archive_dashboard.load() is None
+
+    info = internet_archive_dashboard.dict_safe()
+    assert info['entry_point_type'] == 'dashboard'
+    assert info['id_url_safe'] == 'internet-archive'
+    assert info['external_url'] == 'https://archive.org/'
+    assert info['icon'].startswith('https://archive.org/')
+    assert info['launch_modes'] == ['embedded', 'tab']
+
+
 def test_plugin_schemas():
     from test_app.dashboards.plugin_workspace.schemas import plugin_schemas
 
@@ -157,3 +171,90 @@ def test_lab_monitor_icon():
     assert response.status_code == 200
     assert response.headers['content-type'].startswith('image/svg+xml')
     assert response.text.lstrip().startswith('<svg')
+
+
+@pytest.fixture
+def lab_monitor():
+    from test_app.dashboards.lab_monitor import server
+
+    # A fresh simulated lab for every test.
+    server.get_simulator.cache_clear()
+    yield TestClient(server.app), server
+    server.get_simulator.cache_clear()
+
+
+def test_lab_monitor_page(lab_monitor):
+    client, _ = lab_monitor
+
+    page = client.get('/')
+    assert page.status_code == 200
+    assert 'static/app.js' in page.text
+
+    for path in ['app.js', 'gauge.js', 'trends.js', 'annunciator.js', 'rupture_fx.js']:
+        script = client.get(f'/static/{path}')
+        assert script.status_code == 200, path
+        assert 'javascript' in script.headers['content-type'], path
+    assert client.get('/static/app.css').status_code == 200
+
+
+def test_lab_monitor_lab(lab_monitor):
+    client, _ = lab_monitor
+
+    body = client.get('/api/lab').json()
+
+    assert body['controls']['pump_on'] is True
+    assert body['at_risk'] is False
+    assert [g['key'] for g in body['gauges']] == [
+        'pressure',
+        'temperature',
+        'argon',
+        'cooling',
+        'chiller',
+        'ln2',
+    ]
+    assert body['pressure_gauge'] == 'pressure'
+    assert {tile['label'] for tile in body['alarms']} >= {'Chamber', 'LN2 dewar'}
+    assert body['rupture']['remaining'] is None
+    assert [p['title'] for p in body['trends']['panels']][0] == 'Pressure (mbar)'
+
+
+def test_lab_monitor_controls(lab_monitor):
+    client, server = lab_monitor
+
+    body = client.patch(
+        '/api/lab/controls', json={'pump_on': False, 'heater_setpoint_c': 300}
+    ).json()
+    assert body['controls']['pump_on'] is False
+    assert body['controls']['heater_setpoint_c'] == 300
+    assert server.get_simulator().controls.pump_on is False
+
+    assert client.patch('/api/lab/controls', json={'unknown': True}).status_code == 422
+    assert (
+        client.patch('/api/lab/controls', json={'heater_setpoint_c': 5000}).status_code
+        == 422
+    )
+
+    body = client.patch('/api/lab/controls', json={'gas_inlet_stuck': True}).json()
+    assert body['at_risk'] is True
+
+    body = client.post('/api/lab/reset').json()
+    assert body['controls']['pump_on'] is True
+    assert body['controls']['gas_inlet_stuck'] is False
+
+
+def test_lab_monitor_oasis(lab_monitor, monkeypatch):
+    client, server = lab_monitor
+
+    def unavailable():
+        raise RuntimeError('no search')
+
+    monkeypatch.setattr(server.oasis, 'content_stats', unavailable)
+    monkeypatch.setitem(server._content_cache, 'time', 0.0)
+
+    body = client.get('/api/oasis').json()
+
+    assert [g['key'] for g in body['gauges']] == ['cpu', 'memory', 'disk']
+    assert len(body['process_metrics']) == 4
+    assert body['content_metrics'] == []
+    assert 'no search' in body['content_error']
+    assert body['trends']['panels'][0]['title'] == 'Usage (%)'

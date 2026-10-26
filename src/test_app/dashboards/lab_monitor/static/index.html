@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab Monitor</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="static/app.css">
+<link rel="stylesheet" href="static/instruments.css">
+<link rel="stylesheet" href="static/rupture_fx.css">
+<script type="module" src="static/app.js"></script>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Lab Monitor</h1>
+    <span class="spacer"></span>
+    <span class="status" id="status" role="status"></span>
+    <label class="refresh">Refresh every
+      <select id="refresh">
+        <option value="1">1 s</option>
+        <option value="2" selected>2 s</option>
+        <option value="5">5 s</option>
+        <option value="10">10 s</option>
+      </select>
+    </label>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-lab" aria-controls="panel-lab" aria-selected="true">Lab equipment</button>
+    <button role="tab" id="tab-oasis" aria-controls="panel-oasis" aria-selected="false" tabindex="-1">Computer (NOMAD Oasis)</button>
+  </nav>
+
+  <section id="panel-lab" role="tabpanel" aria-labelledby="tab-lab">
+    <p class="caption">Sputter chamber SC-1 (simulated instruments)</p>
+    <div class="lab-layout">
+      <div class="card stack">
+        <div id="lab-alarms"></div>
+        <div class="gauges" id="lab-gauges"></div>
+        <details open>
+          <summary>Trends (last 10 minutes)</summary>
+          <div id="lab-trends"></div>
+        </details>
+      </div>
+
+      <aside class="card controls">
+        <form id="controls" class="stack">
+          <div>
+            <h2>Chamber controls</h2>
+            <p class="caption">The lab is shared: changes apply for everyone viewing it.</p>
+          </div>
+          <label class="switch"><input type="checkbox" data-control="pump_on">Turbo pump</label>
+          <label class="slider">Heater setpoint
+            <output data-for="heater_setpoint_c"></output>
+            <input type="range" data-control="heater_setpoint_c" min="20" max="700" step="5" data-unit="°C">
+          </label>
+          <label class="slider">Argon setpoint
+            <output data-for="argon_setpoint_sccm"></output>
+            <input type="range" data-control="argon_setpoint_sccm" min="0" max="100" step="1" data-unit="sccm">
+          </label>
+          <label class="switch"><input type="checkbox" data-control="cooling_valve_open">Cooling water valve</label>
+          <label class="switch"><input type="checkbox" data-control="ln2_auto_refill">LN2 auto-refill</label>
+          <hr>
+          <h3>Fault injection</h3>
+          <label class="switch"><input type="checkbox" data-control="leak">Vacuum leak</label>
+          <div>
+            <label class="switch"><input type="checkbox" data-control="gas_inlet_stuck" aria-describedby="stuck-hint">Gas inlet stuck open</label>
+            <p class="hint" id="stuck-hint">Over-pressure. Above <span id="overpressure">a limit</span> the chamber ruptures after a countdown unless the inlet is closed.</p>
+          </div>
+          <button type="button" class="outlined" id="reset">Reset chamber</button>
+        </form>
+      </aside>
+    </div>
+  </section>
+
+  <section id="panel-oasis" role="tabpanel" aria-labelledby="tab-oasis" hidden>
+    <p class="caption">Resource usage and content of the NOMAD Oasis serving this page</p>
+    <div class="card stack">
+      <div class="gauges" id="oasis-gauges"></div>
+      <div class="metrics" id="oasis-process-metrics"></div>
+      <div class="notice" id="oasis-content-error" hidden></div>
+      <div class="metrics" id="oasis-content-metrics"></div>
+      <p class="caption" id="oasis-version"></p>
+      <div id="oasis-trends"></div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,177 @@
+/* NOMAD's light and dark palettes (nomad-gui src/components/theme/
+   themeOptions.ts). The page follows the system setting, and the GUI's mode
+   when it is embedded in the GUI on the same origin (app.js sets data-theme).
+   The background is the GUI's paper colour, which surrounds the dashboard. */
+:root {
+  --lab-font: "Titillium Web", system-ui, sans-serif;
+  --lab-radius: 4px;
+  --lab-bg: #FFFFFF;
+  --lab-bg-2: #F8F8FA;
+  --lab-text: #1D1D1D;
+  --lab-muted: #666666;
+  --lab-primary: #2A4CDF;
+  --lab-on-primary: #FFFFFF;
+  --lab-primary-soft: #2A4CDF14;
+  --lab-border: #E0E0E0;
+  --lab-border-light: #EBEBEF;
+  --lab-gray: #9E9E9E;
+  --lab-green: #007A55;
+  --lab-orange: #ED6C02;
+  --lab-orange-text: #BB4D0E;
+  --lab-orange-bg: #FFFBEB;
+  --lab-red: #C10007;
+  --lab-red-text: #991B1B;
+  --lab-red-bg: #FEF2F2;
+  --lab-chart-colors: #2A4CDF, #008564, #976D2B, #2775DC, #2A8080, #947100, #A06464, #7A6FA0;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lab-bg: #1C2026;
+    --lab-bg-2: #25262D;
+    --lab-text: rgba(255, 255, 255, 0.85);
+    --lab-muted: rgba(255, 255, 255, 0.7);
+    --lab-primary: #8B8CEC;
+    --lab-on-primary: #121212;
+    --lab-primary-soft: #8B8CEC24;
+    --lab-border: #3A3E45;
+    --lab-border-light: #2E3239;
+    --lab-gray: #828588;
+    --lab-green: #2FA685;
+    --lab-orange: #FFB74D;
+    --lab-orange-text: #FFE5C4;
+    --lab-orange-bg: #88522F;
+    --lab-red: #F87171;
+    --lab-red-text: #FECACA;
+    --lab-red-bg: #5C1A1F;
+    --lab-chart-colors: #BAC3FF, #2FA685, #BF8A36, #4A9FFF, #2F8F8F, #FFC700, #C19A9A, #8E84AE;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --lab-bg: #1C2026;
+  --lab-bg-2: #25262D;
+  --lab-text: rgba(255, 255, 255, 0.85);
+  --lab-muted: rgba(255, 255, 255, 0.7);
+  --lab-primary: #8B8CEC;
+  --lab-on-primary: #121212;
+  --lab-primary-soft: #8B8CEC24;
+  --lab-border: #3A3E45;
+  --lab-border-light: #2E3239;
+  --lab-gray: #828588;
+  --lab-green: #2FA685;
+  --lab-orange: #FFB74D;
+  --lab-orange-text: #FFE5C4;
+  --lab-orange-bg: #88522F;
+  --lab-red: #F87171;
+  --lab-red-text: #FECACA;
+  --lab-red-bg: #5C1A1F;
+  --lab-chart-colors: #BAC3FF, #2FA685, #BF8A36, #4A9FFF, #2F8F8F, #FFC700, #C19A9A, #8E84AE;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--lab-bg);
+  color: var(--lab-text);
+  font: 15px/1.5 var(--lab-font);
+}
+#app { padding: 16px; max-width: 1600px; margin: 0 auto; }
+
+/* Header: title, tabs, refresh interval and connection status. */
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-bottom: 12px; }
+h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+header .spacer { flex: 1; }
+.status { font-size: 0.8rem; color: var(--lab-muted); font-variant-numeric: tabular-nums; }
+.status[data-state="error"] { color: var(--lab-red-text); }
+.refresh { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--lab-muted); }
+select {
+  font: inherit; color: var(--lab-text); background: var(--lab-bg);
+  border: 1px solid var(--lab-border); border-radius: var(--lab-radius); padding: 2px 6px;
+}
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--lab-border); margin-bottom: 12px; overflow-x: auto; }
+.tabs button {
+  font: 600 0.85rem/1 var(--lab-font); text-transform: uppercase; letter-spacing: 0.02em;
+  color: var(--lab-muted); background: none; border: none; cursor: pointer;
+  padding: 12px 16px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+}
+.tabs button:hover { color: var(--lab-text); }
+.tabs button[aria-selected="true"] { color: var(--lab-primary); border-bottom-color: var(--lab-primary); }
+.tabs button:focus-visible { outline: 2px solid var(--lab-primary); outline-offset: -2px; }
+
+.caption { font-size: 0.85rem; color: var(--lab-muted); margin: 0 0 8px; }
+
+.card {
+  background: var(--lab-bg); border: 1px solid var(--lab-border);
+  border-radius: 8px; padding: 16px; min-width: 0;
+}
+.stack { display: grid; gap: 16px; }
+
+/* Lab tab: instruments next to the controls, controls below on narrow screens. */
+.lab-layout { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 280px; align-items: start; }
+@media (max-width: 900px) { .lab-layout { grid-template-columns: minmax(0, 1fr); } }
+
+.gauges { display: grid; gap: 16px 24px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 640px) { .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+details > summary {
+  cursor: pointer; font-weight: 600; padding: 4px 0; list-style-position: inside;
+}
+details > summary:focus-visible { outline: 2px solid var(--lab-primary); outline-offset: 2px; }
+details[open] > summary { margin-bottom: 8px; }
+
+/* Controls */
+.controls h2 { font-size: 1rem; font-weight: 700; margin: 0 0 4px; }
+.controls h3 { font-size: 0.9rem; font-weight: 700; margin: 4px 0 0; }
+.controls .caption { margin-bottom: 4px; }
+.controls hr { border: none; border-top: 1px solid var(--lab-border); margin: 4px 0; width: 100%; }
+.controls form { display: grid; gap: 12px; }
+.hint { font-size: 0.75rem; color: var(--lab-muted); line-height: 1.35; }
+
+.switch { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.switch input {
+  appearance: none; flex: none; position: relative; margin: 0; cursor: pointer;
+  width: 34px; height: 20px; border-radius: 10px; background: var(--lab-gray);
+  transition: background-color 0.2s;
+}
+.switch input::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  border-radius: 50%; background: #FFFFFF; transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.switch input:checked { background: var(--lab-primary); }
+.switch input:checked::after { transform: translateX(14px); }
+.switch input:focus-visible { outline: 2px solid var(--lab-primary); outline-offset: 2px; }
+
+.slider { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 0.9rem; }
+.slider output { font-variant-numeric: tabular-nums; color: var(--lab-primary); font-weight: 600; }
+.slider input { grid-column: 1 / -1; width: 100%; margin: 0; accent-color: var(--lab-primary); }
+
+button.outlined {
+  font: 600 0.85rem/1 var(--lab-font); text-transform: uppercase; letter-spacing: 0.02em;
+  border-radius: var(--lab-radius); padding: 9px 16px; cursor: pointer;
+  border: 1px solid var(--lab-primary);
+}
+button.outlined { background: transparent; color: var(--lab-primary); }
+button.outlined:hover { background: var(--lab-primary-soft); }
+button:disabled { opacity: 0.5; cursor: default; }
+
+/* Oasis tab: metric tiles. */
+.metrics { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.metric { border: 1px solid var(--lab-border); border-radius: 8px; padding: 10px 14px; min-width: 0; }
+.metric .label { font-size: 0.8rem; color: var(--lab-muted); display: flex; gap: 4px; align-items: center; }
+.metric .label .help {
+  display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%;
+  border: 1px solid currentColor; font-size: 0.6rem; font-weight: 700; cursor: help;
+}
+.metric .value { font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.notice {
+  border: 1px solid var(--lab-orange); background: var(--lab-orange-bg); color: var(--lab-orange-text);
+  border-radius: var(--lab-radius); padding: 8px 12px; font-size: 0.9rem;
+}
+[hidden] { display: none !important; }

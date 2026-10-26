@@ -1,9 +1,9 @@
+// Rupture countdown and explosion, drawn over the pressure gauge. The
+// countdown ticks in the browser from the server's deadline, so it stays smooth
+// whatever the refresh interval is. Called on every refresh: its state lives on
+// `window`, so a refresh only corrects the clock and the explosion plays once.
 export default function (component) {
-  const { data, parentElement } = component;
-  // The overlays live on <body>, outside the component: hand them the theme.
-  const theme = getComputedStyle(parentElement);
-  document.documentElement.style.setProperty('--lab-fx-bg', theme.getPropertyValue('--st-background-color').trim() || '#fff');
-  document.documentElement.style.setProperty('--lab-fx-font', theme.getPropertyValue('--st-font').trim() || 'sans-serif');
+  const { data } = component;
   const fx = (window.__labRuptureFx ||= {
     deadline: null, played: null, lastSecond: null, countdown: null, stamp: null, raf: null, seen: 0,
   });
@@ -82,7 +82,7 @@ export default function (component) {
       document.body.appendChild(boom);
       setTimeout(() => boom.remove(), 3000);
 
-      const app = document.querySelector('[data-testid="stAppViewContainer"]') || document.body;
+      const app = document.getElementById('app') || document.body;
       app.classList.remove('lab-shake');
       void app.offsetWidth; // restart the animation
       app.classList.add('lab-shake');
