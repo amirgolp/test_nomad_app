@@ -1,0 +1,8 @@
+{
+  "data": {
+    "m_def": "test_app.schema_packages.requests.LabInstrument",
+    "name": "Jeol JEM-ARM200F",
+    "lab_id": "JEOL-ARM200F",
+    "em_type": "(S)TEM"
+  }
+}

@@ -1,0 +1,7 @@
+data:
+  m_def: test_app.schema_packages.requests.MeasurementRequest
+  title: HRTEM of batch 12
+  sample: A-07
+  priority: high
+  instrument:
+    lab_id: TALOS-F200X

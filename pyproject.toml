@@ -27,6 +27,7 @@ maintainers = [
 license = { file = "LICENSE" }
 dependencies = [
     "nomad-lab>=1.3.0",
+    "httpx>=0.27",
     "psutil>=5.9",
     "python-magic-bin; sys_platform == 'win32'",
 ]
@@ -118,6 +119,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 "test_app.dashboards.lab_monitor" = ["icon.svg", "static/*"]
 "test_app.dashboards.plugin_workspace" = ["static/*"]
+"test_app.dashboards.measurement_requests" = ["static/*"]
 
 [project.entry-points.'nomad.plugin']
 
@@ -130,6 +132,10 @@ lab_monitor_dashboard = "test_app.dashboards:lab_monitor_dashboard"
 plugin_workspace_dashboard = "test_app.dashboards:plugin_workspace_dashboard"
 
 internet_archive_dashboard = "test_app.dashboards:internet_archive_dashboard"
+
+measurement_requests_schema = "test_app.schema_packages:measurement_requests_schema"
+
+measurement_requests_dashboard = "test_app.dashboards:measurement_requests_dashboard"
 
 [tool.pytest.ini_options]
 # tests/apps/test_app.py would otherwise be imported as `test_app` and shadow

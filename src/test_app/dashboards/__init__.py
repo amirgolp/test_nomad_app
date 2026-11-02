@@ -33,6 +33,23 @@ class PluginWorkspaceDashboardEntryPoint(DashboardEntryPoint):
         return create_app(self)
 
 
+class MeasurementRequestsDashboardEntryPoint(DashboardEntryPoint):
+    nomad_api_url: str | None = Field(
+        None,
+        description=(
+            'Base URL of the NOMAD API the dashboard creates uploads with, as '
+            'reachable from the NOMAD server, e.g. '
+            '`http://localhost:8000/nomad-oasis/api`. Defaults to '
+            '`config.api_url()`.'
+        ),
+    )
+
+    def load(self):
+        from test_app.dashboards.measurement_requests.app import create_app
+
+        return create_app(self)
+
+
 lab_monitor_dashboard = LabMonitorDashboardEntryPoint(
     name='Lab Monitor',
     description=(
@@ -50,6 +67,16 @@ plugin_workspace_dashboard = PluginWorkspaceDashboardEntryPoint(
         'entries of them. Requires login.'
     ),
     id_url_safe='plugin-workspace',
+    launch_modes=['embedded', 'tab'],
+)
+
+measurement_requests_dashboard = MeasurementRequestsDashboardEntryPoint(
+    name='Measurement Requests',
+    description=(
+        'Request measurements on the lab instruments and follow their status. '
+        'Requires login.'
+    ),
+    id_url_safe='measurement-requests',
     launch_modes=['embedded', 'tab'],
 )
 

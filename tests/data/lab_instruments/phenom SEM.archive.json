@@ -1,0 +1,8 @@
+{
+  "data": {
+    "m_def": "test_app.schema_packages.requests.LabInstrument",
+    "name": "Phenom Pharos Desktop SEM",
+    "lab_id": "PHENOM-PHAROS",
+    "em_type": "SEM"
+  }
+}

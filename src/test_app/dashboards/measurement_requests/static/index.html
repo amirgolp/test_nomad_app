@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measurement Requests</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --paper: #ffffff;
+    --text: #1d2433;
+    --muted: #5b6577;
+    --primary: #2a4cdf;
+    --divider: #dde2ea;
+    --error: #c62828;
+    --success: #2e7d32;
+    --warning: #b26a00;
+    --radius: 8px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-mui-color-scheme="light"]) {
+      --bg: #12151c;
+      --paper: #1b1f29;
+      --text: #e7eaf0;
+      --muted: #9aa3b5;
+      --primary: #8ea2ff;
+      --divider: #2c3240;
+      --error: #ef7a7a;
+      --success: #7bc47f;
+      --warning: #f0b45c;
+      color-scheme: dark;
+    }
+  }
+  :root[data-mui-color-scheme="dark"] {
+    --bg: #12151c;
+    --paper: #1b1f29;
+    --text: #e7eaf0;
+    --muted: #9aa3b5;
+    --primary: #8ea2ff;
+    --divider: #2c3240;
+    --error: #ef7a7a;
+    --success: #7bc47f;
+    --warning: #f0b45c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0; }
+  h2 { font-size: 15px; font-weight: 500; margin: 0 0 12px; }
+  header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  header .spacer { flex: 1; }
+  header select { width: auto; }
+  .user { color: var(--muted); }
+  .grid { display: grid; gap: 16px; }
+  .tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .cols { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); margin-top: 16px; }
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius);
+    padding: 16px;
+    min-width: 0;
+  }
+  .tile .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .tile .value { font-size: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .tile.alert .value { color: var(--error); }
+  .bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; margin-bottom: 10px; }
+  .bar-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--divider); overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: var(--primary); border-radius: 3px; }
+  h3 { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 16px 0 8px; }
+  h3:first-of-type { margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--divider); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  .table-wrap { overflow-x: auto; }
+  .sub { color: var(--muted); font-size: 12px; }
+  .chip {
+    display: inline-block; padding: 0 8px; border-radius: 10px; font-size: 12px;
+    border: 1px solid currentColor; white-space: nowrap;
+  }
+  .chip.ok { color: var(--success); }
+  .chip.fail { color: var(--error); }
+  .chip.busy { color: var(--warning); }
+  .chip.muted { color: var(--muted); }
+  .chip.primary { color: var(--primary); }
+  form { display: grid; gap: 12px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > .field { flex: 1 1 200px; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); min-width: 0; }
+  .field .hint { font-size: 12px; }
+  input, select, textarea {
+    font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--divider); border-radius: 4px; padding: 6px 8px; min-width: 0; width: 100%;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  button {
+    font: inherit; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--primary); border-radius: 4px; padding: 6px 14px;
+    background: var(--primary); color: var(--paper); justify-self: start;
+  }
+  button.secondary { background: transparent; color: var(--primary); }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { min-height: 1.5em; font-size: 13px; color: var(--muted); }
+  .status.error { color: var(--error); }
+  .status.success { color: var(--success); }
+  .status.warning { color: var(--warning); }
+  .empty { color: var(--muted); padding: 8px 0; }
+  .signed-out { max-width: 520px; margin: 48px auto; text-align: center; }
+  .signed-out p { color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Measurement Requests</h1>
+  <span class="user" id="user"></span>
+  <span class="spacer"></span>
+  <select id="scope" title="Which requests to count and list" hidden>
+    <option value="mine">My requests</option>
+    <option value="all">All requests I can see</option>
+  </select>
+  <button class="secondary" id="refresh" type="button" hidden>Refresh</button>
+</header>
+
+<div class="status" id="global-status">Loading…</div>
+
+<section class="card signed-out" id="signed-out" hidden>
+  <h2>You are not signed in</h2>
+  <p>Requests are created for the logged-in NOMAD user. Sign in to NOMAD, then reload this page.</p>
+  <p><a id="gui-link" target="_top" href="#">Go to NOMAD</a></p>
+</section>
+
+<main id="content" hidden>
+  <section class="grid tiles">
+    <div class="card tile"><div class="label">Requests</div><div class="value" id="t-total">–</div></div>
+    <div class="card tile"><div class="label">Open</div><div class="value" id="t-open">–</div></div>
+    <div class="card tile"><div class="label">Measured</div><div class="value" id="t-measured">–</div></div>
+    <div class="card tile alert"><div class="label">Instrument not found</div><div class="value" id="t-unresolved">–</div></div>
+    <div class="card tile alert"><div class="label">Failed processing</div><div class="value" id="t-failed">–</div></div>
+  </section>
+
+  <section class="grid cols">
+    <div class="card">
+      <h2>New request</h2>
+      <form id="request-form" novalidate>
+        <div class="row">
+          <label class="field">Title
+            <input id="title" required maxlength="120" placeholder="e.g. HRTEM of batch 12">
+          </label>
+          <label class="field">Instrument
+            <select id="instrument" required></select>
+            <span class="hint" id="instrument-hint"></span>
+          </label>
+        </div>
+        <div class="row">
+          <label class="field">Sample
+            <input id="sample" maxlength="120" placeholder="e.g. A-07">
+          </label>
+          <label class="field">Priority
+            <select id="priority">
+              <option value="low">Low</option>
+              <option value="normal" selected>Normal</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+        </div>
+        <label class="field">Measurement
+          <textarea id="measurement" maxlength="2000" placeholder="What should be measured, and how?"></textarea>
+        </label>
+        <button type="submit" id="submit">Submit request</button>
+        <div class="status" id="action-status"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Requests by status and instrument</h2>
+      <h3>Status</h3>
+      <div id="status-counts"></div>
+      <h3>Instrument</h3>
+      <div id="instrument-counts"></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top: 16px">
+    <h2>Latest requests</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Request</th><th>Instrument</th><th>Priority</th><th>Status</th><th>Processing</th></tr></thead>
+        <tbody id="requests"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // The dashboard is mounted at {api_base_path}/dashboards/{id_url_safe}/.
+  var dashboardBase = window.location.pathname.replace(/(\/dashboards\/[^/]+\/).*$/, '$1');
+  var apiBase = dashboardBase.replace(/\/dashboards\/[^/]+\/$/, '');
+  var guiBase = findGuiBase();
+  var STATUSES = ['submitted', 'approved', 'scheduled', 'measured', 'rejected', 'instrument not found'];
+  var OPEN = ['submitted', 'approved', 'scheduled'];
+  var instruments = [];
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function findGuiBase() {
+    // The GUI page embedding us is .../dashboards/{id}; everything before that
+    // is the GUI base. The parent is only readable when it is same-origin, the
+    // referrer may be reduced to the bare origin when it is not.
+    var candidates = [];
+    try { candidates.push(window.parent !== window && window.parent.location.href); } catch (e) {}
+    candidates.push(document.referrer);
+    for (var i = 0; i < candidates.length; i++) {
+      var url = candidates[i];
+      if (!url) continue;
+      var match = url.match(/^(.*?)\/dashboards\//);
+      if (match) return match[1];
+      if (window.parent !== window) return url.replace(/\/+$/, '');
+    }
+    return window.location.origin + apiBase + '/gui/v2';
+  }
+
+  function adoptParentTheme() {
+    if (window.parent === window) return;
+    var parentRoot;
+    try { parentRoot = window.parent.document.documentElement; } catch (e) { return; }
+    var mapping = {
+      '--bg': '--mui-palette-background-default',
+      '--paper': '--mui-palette-background-paper',
+      '--text': '--mui-palette-text-primary',
+      '--muted': '--mui-palette-text-secondary',
+      '--primary': '--mui-palette-primary-main',
+      '--divider': '--mui-palette-divider',
+      '--error': '--mui-palette-error-main',
+      '--success': '--mui-palette-success-main',
+      '--warning': '--mui-palette-warning-main'
+    };
+    function apply() {
+      var root = document.documentElement;
+      var scheme = parentRoot.getAttribute('data-mui-color-scheme');
+      if (scheme) root.setAttribute('data-mui-color-scheme', scheme);
+      var style = window.parent.getComputedStyle(parentRoot);
+      Object.keys(mapping).forEach(function (local) {
+        var value = style.getPropertyValue(mapping[local]).trim();
+        if (value) root.style.setProperty(local, value);
+        else root.style.removeProperty(local);
+      });
+    }
+    apply();
+    new MutationObserver(apply).observe(parentRoot, {
+      attributes: true, attributeFilter: ['data-mui-color-scheme', 'class', 'style']
+    });
+    return apply;
+  }
+
+  function followGuiColorMode(reapplyParentTheme) {
+    // The GUI posts its color mode to embedded dashboards, which works across
+    // origins too. Answering our request, and again on every switch.
+    if (window.parent === window) return;
+    window.addEventListener('message', function (event) {
+      var message = event.data;
+      if (event.source !== window.parent || !message || message.type !== 'nomad:color-mode') return;
+      if (message.mode !== 'light' && message.mode !== 'dark') return;
+      document.documentElement.setAttribute('data-mui-color-scheme', message.mode);
+      if (reapplyParentTheme) reapplyParentTheme();
+    });
+    window.parent.postMessage({type: 'nomad:color-mode-request'}, '*');
+  }
+
+  function request(url, options) {
+    options = options || {};
+    options.credentials = 'same-origin';
+    options.headers = Object.assign({Accept: 'application/json'}, options.headers);
+    return fetch(url, options).then(function (response) {
+      if (response.ok) return response.json();
+      return response.json().catch(function () { return {}; }).then(function (body) {
+        var detail = body && body.detail;
+        if (Array.isArray(detail)) detail = detail.map(function (d) { return d.msg; }).join('; ');
+        var error = new Error(detail || response.status + ' ' + response.statusText);
+        error.status = response.status;
+        throw error;
+      });
+    });
+  }
+
+  function nomad(path, options) { return request(apiBase + '/api/v1' + path, options); }
+  function dashboard(path, options) { return request(dashboardBase + path, options); }
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (key) {
+      if (key === 'text') node.textContent = attrs[key];
+      else node.setAttribute(key, attrs[key]);
+    });
+    (children || []).forEach(function (child) { if (child) node.appendChild(child); });
+    return node;
+  }
+
+  function guiLink(path, label) {
+    return el('a', {href: guiBase + path, target: '_top', text: label});
+  }
+
+  function entryLink(uploadId, entryId, label) {
+    return guiLink('/projects/' + uploadId + '/entries/' + entryId, label);
+  }
+
+  function fmt(n) { return n == null ? '–' : Number(n).toLocaleString(); }
+
+  function ago(iso) {
+    if (!iso) return '';
+    var seconds = (Date.now() - new Date(iso).getTime()) / 1000;
+    var units = [[86400 * 365, 'y'], [86400 * 30, 'mo'], [86400, 'd'], [3600, 'h'], [60, 'min']];
+    for (var i = 0; i < units.length; i++) {
+      if (seconds >= units[i][0]) return Math.floor(seconds / units[i][0]) + units[i][1] + ' ago';
+    }
+    return 'just now';
+  }
+
+  function sum(counts, keys) {
+    return keys.reduce(function (total, key) { return total + (counts[key] || 0); }, 0);
+  }
+
+  function statusChip(status) {
+    var kind = {
+      'measured': 'ok', 'rejected': 'muted', 'instrument not found': 'fail',
+      'approved': 'primary', 'scheduled': 'primary'
+    }[status] || 'busy';
+    return el('span', {class: 'chip ' + kind, text: status || 'unknown'});
+  }
+
+  function processingChip(status) {
+    if (status === 'SUCCESS') return el('span', {class: 'chip ok', text: 'processed'});
+    if (status === 'FAILURE') return el('span', {class: 'chip fail', text: 'failed'});
+    return el('span', {class: 'chip busy', text: (status || 'pending').toLowerCase()});
+  }
+
+  function setStatus(id, content, kind) {
+    var node = $(id);
+    node.replaceChildren();
+    if (typeof content === 'string') node.textContent = content;
+    else if (content) node.appendChild(content);
+    node.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function instrumentLabel(labId) {
+    var instrument = instruments.find(function (i) { return i.lab_id === labId; });
+    return instrument ? instrument.name : labId;
+  }
+
+  // --- rendering ----------------------------------------------------------
+
+  function renderInstruments(response) {
+    var user = response.user;
+    $('user').textContent = 'Signed in as ' + (user.name || user.username);
+    instruments = response.instruments;
+
+    var select = $('instrument');
+    var previous = select.value;
+    select.replaceChildren();
+    var usable = instruments.filter(function (i) { return i.lab_id; });
+    if (!usable.length) select.appendChild(el('option', {value: '', text: 'No instruments with an ID'}));
+    usable.forEach(function (instrument) {
+      var label = instrument.name + ' (' + instrument.lab_id + ')' +
+        (instrument.em_type ? ' · ' + instrument.em_type : '');
+      select.appendChild(el('option', {value: instrument.lab_id, text: label}));
+    });
+    if (usable.some(function (i) { return i.lab_id === previous; })) select.value = previous;
+
+    var skipped = instruments.length - usable.length;
+    $('instrument-hint').textContent = skipped
+      ? skipped + ' instrument' + (skipped > 1 ? 's have' : ' has') + ' no ID and cannot be requested.'
+      : '';
+  }
+
+  function renderBars(container, counts, keys, label) {
+    var max = Math.max.apply(null, keys.map(function (k) { return counts[k] || 0; }).concat([1]));
+    container.replaceChildren();
+    if (!keys.length) container.appendChild(el('div', {class: 'empty', text: 'No requests yet.'}));
+    keys.forEach(function (key) {
+      var count = counts[key] || 0;
+      container.appendChild(el('div', {class: 'bar-row'}, [
+        el('span', {class: 'name', text: label(key)}),
+        el('span', {class: 'count', text: fmt(count)}),
+        el('div', {class: 'bar'}, [el('span', {style: 'width:' + (100 * count / max) + '%'})])
+      ]));
+    });
+  }
+
+  function renderRequests(response) {
+    var byStatus = response.aggregations.status || {};
+    var byInstrument = response.aggregations.instrument || {};
+    var processing = response.aggregations.process_status || {};
+    $('t-total').textContent = fmt(response.n_requests);
+    $('t-open').textContent = fmt(sum(byStatus, OPEN));
+    $('t-measured').textContent = fmt(byStatus.measured || 0);
+    $('t-unresolved').textContent = fmt(byStatus['instrument not found'] || 0);
+    $('t-failed').textContent = fmt(processing.FAILURE || 0);
+
+    renderBars($('status-counts'), byStatus, STATUSES, function (s) { return s; });
+    renderBars($('instrument-counts'), byInstrument, Object.keys(byInstrument), instrumentLabel);
+
+    var tbody = $('requests');
+    tbody.replaceChildren();
+    if (!response.requests.length) {
+      tbody.appendChild(el('tr', {}, [el('td', {colspan: '5', class: 'empty', text: 'No requests yet.'})]));
+    }
+    response.requests.forEach(function (row) {
+      var sub = [row.sample, row.requester, ago(row.entry_create_time)].filter(Boolean).join(' · ');
+      tbody.appendChild(el('tr', {}, [
+        el('td', {}, [
+          entryLink(row.upload_id, row.entry_id, row.title || row.entry_id),
+          el('div', {class: 'sub', text: sub})
+        ]),
+        el('td', {text: row.instrument_id ? instrumentLabel(row.instrument_id) : '–'}),
+        el('td', {text: row.priority || '–'}),
+        el('td', {}, [statusChip(row.status)]),
+        el('td', {}, [processingChip(row.process_status)])
+      ]));
+    });
+    return response;
+  }
+
+  function load() {
+    return Promise.all([
+      dashboard('api/instruments'),
+      dashboard('api/requests?scope=' + $('scope').value)
+    ]).then(function (results) {
+      renderInstruments(results[0]);
+      var requests = renderRequests(results[1]);
+      $('content').hidden = false;
+      $('refresh').hidden = false;
+      $('scope').hidden = false;
+      $('signed-out').hidden = true;
+      setStatus('global-status', '');
+      return requests;
+    }).catch(function (error) {
+      if (error.status === 401) {
+        $('content').hidden = true;
+        $('refresh').hidden = true;
+        $('scope').hidden = true;
+        $('signed-out').hidden = false;
+        $('user').textContent = '';
+        $('gui-link').href = guiBase + '/';
+        setStatus('global-status', '');
+      } else {
+        setStatus('global-status', 'Could not load data: ' + error.message, 'error');
+      }
+    });
+  }
+
+  // --- submitting ---------------------------------------------------------
+
+  function waitForProcessing(uploadId, deadline) {
+    return nomad('/uploads/' + uploadId).then(function (response) {
+      if (!response.data.process_running) return response.data;
+      if (Date.now() > deadline) throw new Error('The request is still processing, refresh shortly.');
+      return new Promise(function (resolve) { setTimeout(resolve, 1000); })
+        .then(function () { return waitForProcessing(uploadId, deadline); });
+    });
+  }
+
+  function reportOutcome(upload, entry) {
+    // The processing status of the upload and its entry, then whether the
+    // instrument reference could be filled in from the ID.
+    if (upload.process_status === 'FAILURE' || !entry) {
+      var errors = (upload.errors || []).join(', ') || 'no entry was created';
+      setStatus('action-status', 'Processing failed: ' + errors, 'error');
+      return;
+    }
+    if (entry.process_status !== 'SUCCESS') {
+      setStatus('action-status', 'Processing the request failed: ' + (entry.errors || []).join(', '), 'error');
+      return;
+    }
+    var data = (entry.entry_metadata || {}).data || {};
+    var unresolved = data.status === 'instrument not found';
+    setStatus('action-status', el('span', {}, [
+      document.createTextNode(unresolved
+        ? 'Request created, but no instrument has this ID. '
+        : 'Request created and linked to the instrument. '),
+      entryLink(entry.upload_id, entry.entry_id, 'Open request')
+    ]), unresolved ? 'warning' : 'success');
+  }
+
+  $('request-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var form = event.target;
+    if (!form.reportValidity()) return;
+    var body = {
+      title: $('title').value.trim(),
+      instrument_id: $('instrument').value,
+      sample: $('sample').value.trim() || null,
+      measurement: $('measurement').value.trim() || null,
+      priority: $('priority').value
+    };
+
+    var button = $('submit');
+    button.disabled = true;
+    var uploadId;
+    setStatus('action-status', 'Creating the request…');
+    dashboard('api/requests', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+    })
+      .then(function (created) {
+        uploadId = created.upload_id;
+        setStatus('action-status', 'Processing "' + created.upload_name + '"…');
+        return waitForProcessing(uploadId, Date.now() + 60000);
+      })
+      .then(function (upload) {
+        // Each entry comes with its search metadata, including `data.status`.
+        return nomad('/uploads/' + uploadId + '/entries')
+          .then(function (entries) { return [upload, entries.data[0]]; });
+      })
+      .then(function (results) {
+        $('title').value = '';
+        $('sample').value = '';
+        $('measurement').value = '';
+        reportOutcome(results[0], results[1]);
+        return load();
+      })
+      .catch(function (error) {
+        setStatus('action-status', 'Could not create the request: ' + error.message, 'error');
+        if (uploadId) load();
+      })
+      .finally(function () { button.disabled = false; });
+  });
+
+  $('refresh').addEventListener('click', function () { load(); });
+  $('scope').addEventListener('change', function () { load(); });
+
+  followGuiColorMode(adoptParentTheme());
+  load();
+})();
+</script>
+</body>
+</html>

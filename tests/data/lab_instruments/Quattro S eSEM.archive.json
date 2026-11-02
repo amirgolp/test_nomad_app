@@ -1,0 +1,8 @@
+{
+  "data": {
+    "m_def": "test_app.schema_packages.requests.LabInstrument",
+    "name": "Quattro S eSEM",
+    "lab_id": "QUATTRO-S",
+    "em_type": "SEM"
+  }
+}

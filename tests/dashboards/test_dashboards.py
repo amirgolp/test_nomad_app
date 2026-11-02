@@ -4,6 +4,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 SCHEMA_PREFIX = 'test_app.schema_packages.schema_package.'
+REQUESTS_PREFIX = 'test_app.schema_packages.requests.'
+ENTRY_SCHEMAS = {
+    SCHEMA_PREFIX + 'NewSchemaPackage',
+    SCHEMA_PREFIX + 'Sample',
+    SCHEMA_PREFIX + 'SputterDeposition',
+    REQUESTS_PREFIX + 'LabInstrument',
+    REQUESTS_PREFIX + 'MeasurementRequest',
+}
 
 
 @pytest.fixture
@@ -70,7 +78,7 @@ def test_plugin_schemas():
 
     schemas = {schema['name']: schema for schema in plugin_schemas('test_app')}
 
-    assert set(schemas) == {'NewSchemaPackage', 'Sample', 'SputterDeposition'}
+    assert {schema['m_def'] for schema in schemas.values()} == ENTRY_SCHEMAS
     sample = schemas['Sample']
     assert sample['m_def'] == SCHEMA_PREFIX + 'Sample'
     fields = {field['name']: field for field in sample['fields']}
@@ -88,6 +96,9 @@ def test_plugin_schemas():
     assert deposition['base_pressure']['unit'] == 'mbar'
     # Quantities without an ELN annotation are not editable in the form.
     assert [f['name'] for f in schemas['NewSchemaPackage']['fields']] == ['name']
+    # Instruments can be created in the workspace, with the ID requests use.
+    instrument = {f['name']: f for f in schemas['LabInstrument']['fields']}
+    assert {'name', 'lab_id', 'em_type'} <= set(instrument)
 
 
 def test_plugin_schemas_of_other_plugin_is_empty():
@@ -109,7 +120,7 @@ def test_workspace_plugin(workspace):
     body = client.get('/api/plugin').json()
 
     assert body['plugin']['name'] == 'test_app'
-    assert len(body['schemas']) == 3
+    assert len(body['schemas']) == len(ENTRY_SCHEMAS)
 
 
 def test_workspace_overview_requires_login(workspace):
@@ -129,10 +140,7 @@ def test_workspace_overview(workspace):
     query = searches[0]['query']['section_defs.definition_qualified_name:any']
     assert searches[0]['owner'] == 'user'
     assert searches[0]['user_id'] == 'user-1'
-    assert set(query) == {
-        SCHEMA_PREFIX + name
-        for name in ('NewSchemaPackage', 'Sample', 'SputterDeposition')
-    }
+    assert set(query) == ENTRY_SCHEMAS
     assert body['user']['username'] == 'test'
     assert body['n_entries'] == 3
     assert body['aggregations']['entry_type'] == {'Sample': 3}

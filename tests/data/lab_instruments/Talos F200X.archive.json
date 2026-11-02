@@ -1,0 +1,8 @@
+{
+  "data": {
+    "m_def": "test_app.schema_packages.requests.LabInstrument",
+    "name": "Talos F200X",
+    "lab_id": "TALOS-F200X",
+    "em_type": "(S)TEM"
+  }
+}
